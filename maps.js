@@ -245,11 +245,18 @@ function tryAutoLocateOnLoad() {
 
 // Simple mapping of weather id to body class for background style
 function updateBackground(weatherId) {
-  document.body.classList.remove('weather-clear','weather-clouds','weather-rain','weather-snow');
-  if (weatherId >= 200 && weatherId < 600) document.body.classList.add('weather-rain');
-  else if (weatherId >= 600 && weatherId < 700) document.body.classList.add('weather-snow');
-  else if (weatherId === 800) document.body.classList.add('weather-clear');
-  else document.body.classList.add('weather-clouds');
+  document.body.classList.remove(
+    "weather-clear",
+    "weather-clouds",
+    "weather-rain",
+    "weather-snow"
+  );
+  if (weatherId >= 200 && weatherId < 600)
+    document.body.classList.add("weather-rain");
+  else if (weatherId >= 600 && weatherId < 700)
+    document.body.classList.add("weather-snow");
+  else if (weatherId === 800) document.body.classList.add("weather-clear");
+  else document.body.classList.add("weather-clouds");
 }
 
 // Init
