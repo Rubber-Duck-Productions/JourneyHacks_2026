@@ -5,8 +5,13 @@ WEATHER_API_KEY = "736185ae3214d80248deba0bc59a9c16"
 const DEFAULT = { lat: 49.2827, lng: -123.1207 }; // Vancouver
 let map, marker, lastCoords = { ...DEFAULT };
 
+// Expose map and lastCoords globally for activities.js
+window.map = null;
+window.lastCoords = lastCoords;
+
 function initMap() {
   map = L.map('map', { zoomControl: true }).setView([DEFAULT.lat, DEFAULT.lng], 12);
+  window.map = map; // Expose globally
 
   L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
     maxZoom: 19,
@@ -18,6 +23,12 @@ function initMap() {
 
 async function getWeatherByCoords(lat, lon) {
   lastCoords = { lat, lon };
+  window.lastCoords = lastCoords; // Update global reference
+  
+  // Update activities location if function exists
+  if (window.updateActivitiesLocation) {
+    window.updateActivitiesLocation(lat, lon);
+  }
 
   // Determine API key: prefer window.WEATHER_API_KEY, fallback to window.INDEX_API_KEY
   const key = (window.WEATHER_API_KEY && window.WEATHER_API_KEY.trim()) ? window.WEATHER_API_KEY : (window.INDEX_API_KEY && window.INDEX_API_KEY.trim()) ? window.INDEX_API_KEY : null;
