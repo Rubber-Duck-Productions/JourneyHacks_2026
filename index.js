@@ -39,8 +39,6 @@ function shouldAppBeOn(temp, desc) {
   return temp >= 10 && desc.toLowerCase().includes("rain");
 }
 
-
-
 function updateBackground(weatherId) {
   document.body.className = ""; // reset
 
@@ -59,9 +57,6 @@ function updateBackground(weatherId) {
 
 const weatherId = data.weather[0].id;
 updateBackground(weatherId);
-
-
-
 
 }
 
