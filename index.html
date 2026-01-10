@@ -1,73 +1,8 @@
-<!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>JourneyHacks - Your Travel Companion</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="stylesheet" href="index.css">
+    
 </head>
-<body class="bg-gray-50">
-    <!-- Header with Website Name -->
-    <header class="bg-gradient-to-r from-blue-600 to-blue-800 text-white shadow-lg">
-        <div class="container flex justify-center items-center mx-auto px-6 py-4">
-            <h1 class="text-3xl font-bold">JourneyHacks</h1>
-        </div>
-    </header>
 
-    <!-- Navigation Bar -->
-    <nav class="bg-white shadow-md border-b border-gray-200">
-        <div class="container mx-auto px-6 py-4">
-            <div class="flex items-center justify-between gap-4">
-                <!-- Left Side - Navigation Buttons -->
-                <div class="flex items-center gap-3">
-                    <button class="px-4 py-2 text-gray-700 hover:bg-blue-50 hover:text-blue-600 rounded-lg transition-colors font-medium">
-                        Faves
-                    </button>
-                    <button class="px-4 py-2 text-gray-700 hover:bg-blue-50 hover:text-blue-600 rounded-lg transition-colors font-medium">
-                        Today's Plan
-                    </button>
-                    <button class="px-4 py-2 text-gray-700 hover:bg-blue-50 hover:text-blue-600 rounded-lg transition-colors font-medium">
-                        Weather
-                    </button>
-                </div>
 
-                <!-- Middle - Search Bar -->
-                <div class="flex-1 max-w-2xl mx-8">
-                    <div class="relative">
-                        <input 
-                            type="text" 
-                            placeholder="Search for places, attractions, restaurants..." 
-                            class="w-full px-4 py-2 pl-10 pr-4 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                        >
-                        <svg class="absolute left-3 top-2.5 h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
-                        </svg>
-                    </div>
-                </div>
 
-                <!-- Right Side - Profile Button -->
-                <div class="flex items-center">
-                    <button class="p-2 rounded-full hover:bg-gray-100 transition-colors">
-                        <svg class="h-6 w-6 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
-                        </svg>
-                    </button>
-                </div>
-            </div>
-        </div>
-    </nav>
-
-    <!-- Main Content - Map Container -->
-    <main class="container mx-auto px-6 py-6">
-        <div class="bg-white rounded-lg shadow-lg overflow-hidden" style="height: calc(100vh - 250px); min-height: 600px;">
-            <!-- Map will go here -->
-            <div id="map" class="w-full h-full bg-gray-200 flex items-center justify-center">
-                <p class="text-gray-500 text-lg">Map will be displayed here</p>
-            </div>
-        </div>
-    </main>
-
-    <script src="index.js"></script>
-</body>
 </html>
