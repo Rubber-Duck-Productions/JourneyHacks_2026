@@ -21,13 +21,16 @@
     .caps{letter-spacing:.22em;}
   </style>
 
-  <!--
-    Set keys on the page (recommended):
-    <script>
-      window.GOOGLE_MAPS_API_KEY = "YOUR_GOOGLE_KEY";
-      window.GEMINI_API_KEY = "YOUR_GEMINI_KEY"; // optional
-    </script>
-  -->
+  <!-- API wiring (NO KEYS HERE) -->
+<script>
+    /* tell frontend where the server endpoints live */
+    window.PLACES_PROXY_URL = "/api/places";
+    window.GEMINI_PROXY_URL = "/api/gemini";
+  </script>
+  
+  <!-- Today's Plan logic -->
+  <script src="/today.js" defer></script>
+  
     
 </head>
 
