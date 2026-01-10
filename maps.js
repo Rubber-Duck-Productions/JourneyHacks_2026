@@ -1,60 +1,78 @@
 /* maps.js — Leaflet + demo OpenWeather integration */
 
-
-WEATHER_API_KEY = "736185ae3214d80248deba0bc59a9c16"
+WEATHER_API_KEY = "736185ae3214d80248deba0bc59a9c16";
 const DEFAULT = { lat: 49.2827, lng: -123.1207 }; // Vancouver
-let map, marker, lastCoords = { ...DEFAULT };
+let map,
+  marker,
+  lastCoords = { ...DEFAULT };
 
 // Expose map and lastCoords globally for activities.js
 window.map = null;
 window.lastCoords = lastCoords;
 
 function initMap() {
-  map = L.map('map', { zoomControl: true }).setView([DEFAULT.lat, DEFAULT.lng], 12);
+  map = L.map("map", { zoomControl: true }).setView(
+    [DEFAULT.lat, DEFAULT.lng],
+    12
+  );
   window.map = map; // Expose globally
 
-  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+  L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
     maxZoom: 19,
-    attribution: '© OpenStreetMap contributors'
+    attribution: "© OpenStreetMap contributors",
   }).addTo(map);
 
-  marker = L.marker([DEFAULT.lat, DEFAULT.lng]).addTo(map).bindPopup('Vancouver').openPopup();
+  marker = L.marker([DEFAULT.lat, DEFAULT.lng])
+    .addTo(map)
+    .bindPopup("Vancouver")
+    .openPopup();
 }
 
 async function getWeatherByCoords(lat, lon) {
   lastCoords = { lat, lon };
   window.lastCoords = lastCoords; // Update global reference
-  
+
   // Update activities location if function exists
   if (window.updateActivitiesLocation) {
     window.updateActivitiesLocation(lat, lon);
   }
 
   // Determine API key: prefer window.WEATHER_API_KEY, fallback to window.INDEX_API_KEY
-  const key = (window.WEATHER_API_KEY && window.WEATHER_API_KEY.trim()) ? window.WEATHER_API_KEY : (window.INDEX_API_KEY && window.INDEX_API_KEY.trim()) ? window.INDEX_API_KEY : null;
+  const key =
+    window.WEATHER_API_KEY && window.WEATHER_API_KEY.trim()
+      ? window.WEATHER_API_KEY
+      : window.INDEX_API_KEY && window.INDEX_API_KEY.trim()
+      ? window.INDEX_API_KEY
+      : null;
 
   if (!key) {
     // No key: demo fallback
-    console.info('[maps] No API key provided — using demo data');
+    console.info("[maps] No API key provided — using demo data");
     updateWeatherUI(getDemoData());
     return;
   }
 
   const url = `https://api.openweathermap.org/data/2.5/weather?lat=${lat}&lon=${lon}&units=metric&appid=${key}`;
-  console.debug('[maps] Fetching weather:', url);
+  console.debug("[maps] Fetching weather:", url);
 
   try {
     const res = await fetch(url);
     if (!res.ok) {
       // Try to parse error body if possible
-      let bodyText = '';
-      try { bodyText = await res.text(); } catch (e) { /* ignore */ }
-      console.warn('[maps] Weather fetch failed', res.status, bodyText);
+      let bodyText = "";
+      try {
+        bodyText = await res.text();
+      } catch (e) {
+        /* ignore */
+      }
+      console.warn("[maps] Weather fetch failed", res.status, bodyText);
 
       if (res.status === 401 || res.status === 403) {
-        showError('API key invalid or not authorized (401/403). Check your key and referrer restrictions.');
+        showError(
+          "API key invalid or not authorized (401/403). Check your key and referrer restrictions."
+        );
       } else if (res.status === 429) {
-        showError('Rate limit exceeded (429). Try again later.');
+        showError("Rate limit exceeded (429). Try again later.");
       } else {
         showError(`Weather request failed (status ${res.status}).`);
       }
@@ -67,8 +85,10 @@ async function getWeatherByCoords(lat, lon) {
     const data = await res.json();
     updateWeatherUI(data);
   } catch (err) {
-    console.error('[maps] Fetch error', err);
-    showError('Network error while fetching weather. Check your connection and API key.');
+    console.error("[maps] Fetch error", err);
+    showError(
+      "Network error while fetching weather. Check your connection and API key."
+    );
     updateWeatherUI(getDemoData());
   }
 }
@@ -76,171 +96,218 @@ async function getWeatherByCoords(lat, lon) {
 function updateWeatherUI(data) {
   const temp = Math.round(data.main.temp);
   const desc = data.weather[0].description;
-  const city = data.name || 'Unknown';
+  const city = data.name || "Unknown";
   const weatherId = data.weather[0].id || 800;
 
-  document.getElementById('city').textContent = city;
-  document.getElementById('temp').textContent = `${temp}°C`;
-  document.getElementById('desc').textContent = desc;
+  document.getElementById("city").textContent = city;
+  document.getElementById("temp").textContent = `${temp}°C`;
+  document.getElementById("desc").textContent = desc;
 
   updateBackground(weatherId);
-  updateMarker(data.coord?.lat || lastCoords.lat, data.coord?.lon || lastCoords.lon, city);
+  updateMarker(
+    data.coord?.lat || lastCoords.lat,
+    data.coord?.lon || lastCoords.lon,
+    city
+  );
 }
 
 function updateMarker(lat, lng, popupText) {
-  marker.setLatLng([lat, lng]).bindPopup(popupText || 'Location').openPopup();
+  marker
+    .setLatLng([lat, lng])
+    .bindPopup(popupText || "Location")
+    .openPopup();
   map.setView([lat, lng], 12);
 }
 
 function showError(msg) {
-  const desc = document.getElementById('desc');
+  const desc = document.getElementById("desc");
   desc.textContent = msg;
 }
 
 function getDemoData() {
   return {
     coord: { lat: DEFAULT.lat, lon: DEFAULT.lng },
-    name: 'Vancouver',
+    name: "Vancouver",
     main: { temp: 8 },
-    weather: [{ id: 803, description: 'Partly cloudy' }]
+    weather: [{ id: 803, description: "Partly cloudy" }],
   };
 }
 
 function initUI() {
-  document.getElementById('searchForm').addEventListener('submit', async (e) => {
-    e.preventDefault();
-    const q = document.getElementById('search').value.trim();
-    if (!q) return;
+  document
+    .getElementById("searchForm")
+    .addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const q = document.getElementById("search").value.trim();
+      if (!q) return;
 
-    // If we have a key we can call OpenWeatherMap geocoding; otherwise simple lookups
-    if (window.WEATHER_API_KEY && window.WEATHER_API_KEY.trim()) {
-      try {
-        const geoUrl = `https://api.openweathermap.org/geo/1.0/direct?q=${encodeURIComponent(q)}&limit=1&appid=${window.WEATHER_API_KEY}`;
-        console.debug('[maps] Geocoding:', geoUrl);
-        const geo = await fetch(geoUrl);
-        if (!geo.ok) {
-          let txt = '';
-          try { txt = await geo.text(); } catch (e) {}
-          console.warn('[maps] Geocode failed', geo.status, txt);
-          if (geo.status === 401 || geo.status === 403) showError('Geocoding rejected: invalid API key (401/403).');
-          else showError(`Geocoding failed (status ${geo.status}).`);
-          return;
+      // If we have a key we can call OpenWeatherMap geocoding; otherwise simple lookups
+      if (window.WEATHER_API_KEY && window.WEATHER_API_KEY.trim()) {
+        try {
+          const geoUrl = `https://api.openweathermap.org/geo/1.0/direct?q=${encodeURIComponent(
+            q
+          )}&limit=1&appid=${window.WEATHER_API_KEY}`;
+          console.debug("[maps] Geocoding:", geoUrl);
+          const geo = await fetch(geoUrl);
+          if (!geo.ok) {
+            let txt = "";
+            try {
+              txt = await geo.text();
+            } catch (e) {}
+            console.warn("[maps] Geocode failed", geo.status, txt);
+            if (geo.status === 401 || geo.status === 403)
+              showError("Geocoding rejected: invalid API key (401/403).");
+            else showError(`Geocoding failed (status ${geo.status}).`);
+            return;
+          }
+          const arr = await geo.json();
+          if (arr && arr.length) {
+            const { lat, lon, name } = arr[0];
+            getWeatherByCoords(lat, lon);
+          } else {
+            showError("Location not found");
+          }
+        } catch (err) {
+          console.error("[maps] Geocoding error", err);
+          showError("Geocoding failed (network error)");
         }
-        const arr = await geo.json();
-        if (arr && arr.length) {
-          const { lat, lon, name } = arr[0];
+      } else {
+        // Demo mapping for a few cities
+        const maps = {
+          vancouver: { lat: 49.2827, lon: -123.1207 },
+          toronto: { lat: 43.6532, lon: -79.3832 },
+          london: { lat: 51.5074, lon: -0.1278 },
+          sydney: { lat: -33.8688, lon: 151.2093 },
+        };
+        const key = q.toLowerCase();
+        if (maps[key]) {
+          const { lat, lon } = maps[key];
           getWeatherByCoords(lat, lon);
         } else {
-          showError('Location not found');
+          showError(
+            "Unknown demo city — try Vancouver, Toronto, London, or Sydney"
+          );
         }
-      } catch (err) {
-        console.error('[maps] Geocoding error', err);
-        showError('Geocoding failed (network error)');
       }
-    } else {
-      // Demo mapping for a few cities
-      const maps = {
-        vancouver: { lat: 49.2827, lon: -123.1207 },
-        toronto: { lat: 43.6532, lon: -79.3832 },
-        london: { lat: 51.5074, lon: -0.1278 },
-        sydney: { lat: -33.8688, lon: 151.2093 }
-      };
-      const key = q.toLowerCase();
-      if (maps[key]) {
-        const { lat, lon } = maps[key];
-        getWeatherByCoords(lat, lon);
-      } else {
-        showError('Unknown demo city — try Vancouver, Toronto, London, or Sydney');
-      }
-    }
-  });
+    });
 
-  document.getElementById('locateBtn').addEventListener('click', () => {
+  document.getElementById("locateBtn").addEventListener("click", () => {
     if (!navigator.geolocation) {
-      showError('Geolocation not supported');
+      showError("Geolocation not supported");
       return;
     }
-    navigator.geolocation.getCurrentPosition((pos) => {
-      const { latitude: lat, longitude: lon } = pos.coords;
-      getWeatherByCoords(lat, lon);
-    }, () => showError('Unable to get your location'));
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        const { latitude: lat, longitude: lon } = pos.coords;
+        getWeatherByCoords(lat, lon);
+      },
+      () => showError("Unable to get your location")
+    );
   });
 
-  document.getElementById('refreshBtn').addEventListener('click', () => {
+  document.getElementById("refreshBtn").addEventListener("click", () => {
     getWeatherByCoords(lastCoords.lat, lastCoords.lon);
   });
 
-  const testBtn = document.getElementById('testKeyBtn');
-  if (testBtn) testBtn.addEventListener('click', testAPIKey);
+  const testBtn = document.getElementById("testKeyBtn");
+  if (testBtn) testBtn.addEventListener("click", testAPIKey);
 }
 
 async function testAPIKey() {
-  const key = (window.WEATHER_API_KEY && window.WEATHER_API_KEY.trim()) ? window.WEATHER_API_KEY : (window.INDEX_API_KEY && window.INDEX_API_KEY.trim()) ? window.INDEX_API_KEY : null;
-  const note = document.getElementById('keyNote');
+  const key =
+    window.WEATHER_API_KEY && window.WEATHER_API_KEY.trim()
+      ? window.WEATHER_API_KEY
+      : window.INDEX_API_KEY && window.INDEX_API_KEY.trim()
+      ? window.INDEX_API_KEY
+      : null;
+  const note = document.getElementById("keyNote");
   if (!key) {
-    const msg = 'No API key set. Add one via inline script before `maps.js` as described in the page.';
-    console.info('[maps] ' + msg);
+    const msg =
+      "No API key set. Add one via inline script before `maps.js` as described in the page.";
+    console.info("[maps] " + msg);
     if (note) note.textContent = msg;
     return;
   }
 
   const testUrl = `https://api.openweathermap.org/data/2.5/weather?q=London&units=metric&appid=${key}`;
-  console.debug('[maps] Testing API key with', testUrl);
+  console.debug("[maps] Testing API key with", testUrl);
 
   try {
     const res = await fetch(testUrl);
-    let info = '';
-    try { info = await res.text(); } catch (e) { info = '' }
+    let info = "";
+    try {
+      info = await res.text();
+    } catch (e) {
+      info = "";
+    }
 
     if (!res.ok) {
-      console.warn('[maps] Test request failed', res.status, info);
+      console.warn("[maps] Test request failed", res.status, info);
       if (note) {
-        if (res.status === 401 || res.status === 403) note.textContent = 'API key invalid or unauthorized (401/403).';
-        else if (res.status === 429) note.textContent = 'Rate limit exceeded (429).';
+        if (res.status === 401 || res.status === 403)
+          note.textContent = "API key invalid or unauthorized (401/403).";
+        else if (res.status === 429)
+          note.textContent = "Rate limit exceeded (429).";
         else note.textContent = `Test request failed (status ${res.status}).`;
       }
       return;
     }
 
-    const data = JSON.parse(info || '{}');
-    console.info('[maps] Test success', data);
-    if (note) note.textContent = `API key looks OK — sample: ${data.name || 'Unknown'}, ${Math.round(data.main?.temp||0)}°C`;
+    const data = JSON.parse(info || "{}");
+    console.info("[maps] Test success", data);
+    if (note)
+      note.textContent = `API key looks OK — sample: ${
+        data.name || "Unknown"
+      }, ${Math.round(data.main?.temp || 0)}°C`;
   } catch (err) {
-    console.error('[maps] API key test error', err);
-    if (note) note.textContent = 'Network error while testing API key';
+    console.error("[maps] API key test error", err);
+    if (note) note.textContent = "Network error while testing API key";
   }
 }
 
 // Attempt to detect the user's location on page load and fetch weather for it.
 function tryAutoLocateOnLoad() {
-  const status = document.getElementById('statusNote');
+  const status = document.getElementById("statusNote");
   if (!navigator.geolocation) {
-    const msg = 'Geolocation not supported by your browser.';
-    console.info('[maps] ' + msg);
+    const msg = "Geolocation not supported by your browser.";
+    console.info("[maps] " + msg);
     if (status) status.textContent = msg;
     // fallback to demo/default
     getWeatherByCoords(DEFAULT.lat, DEFAULT.lng);
     return;
   }
 
-  if (status) status.textContent = 'Locating… (allow the browser to share your location)';
+  if (status)
+    status.textContent = "Locating… (allow the browser to share your location)";
 
   const geoOptions = { timeout: 10000, maximumAge: 0 };
-  navigator.geolocation.getCurrentPosition((pos) => {
-    const { latitude: lat, longitude: lon } = pos.coords;
-    console.info('[maps] Located user', lat, lon);
-    if (status) status.textContent = 'Using your location';
-    getWeatherByCoords(lat, lon);
-  }, (err) => {
-    console.warn('[maps] Geolocation failed', err);
-    if (status) {
-      if (err.code === 1) status.textContent = 'Location permission denied. Click "Use my location" to retry.';
-      else if (err.code === 2) status.textContent = 'Position unavailable. Showing default location.';
-      else if (err.code === 3) status.textContent = 'Location request timed out. Showing default location.';
-      else status.textContent = 'Unable to determine location. Showing default location.';
-    }
-    getWeatherByCoords(DEFAULT.lat, DEFAULT.lng);
-  }, geoOptions);
+  navigator.geolocation.getCurrentPosition(
+    (pos) => {
+      const { latitude: lat, longitude: lon } = pos.coords;
+      console.info("[maps] Located user", lat, lon);
+      if (status) status.textContent = "Using your location";
+      getWeatherByCoords(lat, lon);
+    },
+    (err) => {
+      console.warn("[maps] Geolocation failed", err);
+      if (status) {
+        if (err.code === 1)
+          status.textContent =
+            'Location permission denied. Click "Use my location" to retry.';
+        else if (err.code === 2)
+          status.textContent =
+            "Position unavailable. Showing default location.";
+        else if (err.code === 3)
+          status.textContent =
+            "Location request timed out. Showing default location.";
+        else
+          status.textContent =
+            "Unable to determine location. Showing default location.";
+      }
+      getWeatherByCoords(DEFAULT.lat, DEFAULT.lng);
+    },
+    geoOptions
+  );
 }
 
 // Simple mapping of weather id to body class for background style
@@ -260,7 +327,7 @@ function updateBackground(weatherId) {
 }
 
 // Init
-window.addEventListener('DOMContentLoaded', () => {
+window.addEventListener("DOMContentLoaded", () => {
   initMap();
   initUI();
   // try to auto-locate the user and show local weather (falls back to default)
