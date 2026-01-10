@@ -42,10 +42,12 @@
       <div id="weather-app"
         class="w-full max-w-[1000px] min-h-[750px] rounded-[34px] bg-white/55 backdrop-blur-xl ring-1 ring-white/35 shadow-[0_28px_80px_rgba(0,0,0,0.45)] overflow-hidden"
       >
-        <div class="px-6 sm:px-8 pt-10 sm:pt-12 pb-24 sm:pb-28">
+        <div class="px-6 sm:px-8 pt-8 sm:pt-10 pb-24 sm:pb-28">
 
-          <!-- Header -->
-          <div class="flex items-start justify-between">
+          <!-- TOP ROW: NAV + HEADER -->
+          <div class="flex flex-col gap-5 sm:flex-row sm:items-start sm:justify-between">
+
+            <!-- Left: Title + dots -->
             <div class="flex items-center gap-4">
               <div class="text-[12px] font-semibold uppercase caps text-slate-800/90">
                 Today’s Vibe
@@ -59,24 +61,46 @@
               </div>
             </div>
 
-            <!-- City + Date + Refresh -->
-            <div class="hidden sm:flex flex-col items-end gap-1">
-              <div class="flex items-center gap-2">
-                <div class="rounded-full bg-black/10 px-3 py-1 text-[11px] font-medium text-slate-800/80">
-                  <span id="city">Vancouver</span>
+            <!-- Right: NAV buttons + city/date/refresh -->
+            <div class="flex flex-col items-start sm:items-end gap-3">
+              <!-- NAV BUTTONS -->
+              <nav class="flex flex-wrap gap-2">
+                <!-- If you have separate pages, set hrefs to your routes/files -->
+                <a href="./index.html"
+                   class="rounded-full bg-black/10 px-4 py-2 text-[12px] font-semibold text-slate-800/80 hover:bg-black/15 active:bg-black/20 transition">
+                  Home
+                </a>
+
+                <a href="./todays-plan.html"
+                   class="rounded-full bg-black/10 px-4 py-2 text-[12px] font-semibold text-slate-800/80 hover:bg-black/15 active:bg-black/20 transition">
+                  Today’s Plan
+                </a>
+
+                <a href="./favourites.html"
+                   class="rounded-full bg-black/10 px-4 py-2 text-[12px] font-semibold text-slate-800/80 hover:bg-black/15 active:bg-black/20 transition">
+                  Favourites
+                </a>
+              </nav>
+
+              <!-- City + Date + Refresh -->
+              <div class="hidden sm:flex flex-col items-end gap-1">
+                <div class="flex items-center gap-2">
+                  <div class="rounded-full bg-black/10 px-3 py-1 text-[11px] font-medium text-slate-800/80">
+                    <span id="city">Vancouver</span>
+                  </div>
+
+                  <button id="refreshBtn"
+                    class="rounded-full bg-black/10 px-3 py-1 text-[11px] font-medium text-slate-800/80 hover:bg-black/15 active:bg-black/20 transition"
+                    type="button"
+                    title="Refresh weather"
+                  >
+                    Refresh
+                  </button>
                 </div>
 
-                <button id="refreshBtn"
-                  class="rounded-full bg-black/10 px-3 py-1 text-[11px] font-medium text-slate-800/80 hover:bg-black/15 active:bg-black/20 transition"
-                  type="button"
-                  title="Refresh weather"
-                >
-                  Refresh
-                </button>
-              </div>
-
-              <div class="text-[12px] uppercase tracking-[0.22em] text-slate-700/70">
-                <span id="dateValue"></span>
+                <div class="text-[12px] uppercase tracking-[0.22em] text-slate-700/70">
+                  <span id="dateValue"></span>
+                </div>
               </div>
             </div>
           </div>
@@ -107,14 +131,13 @@
               </div>
             </div>
 
-            <!-- Temperature (also supports legacy #temp) -->
+            <!-- Temperature -->
             <div class="flex flex-col">
               <div class="text-[12px] font-semibold uppercase caps text-slate-700/75">Temperature</div>
               <div class="mt-2 flex items-baseline gap-2">
                 <div id="tempValue" class="text-[34px] font-extrabold">—</div>
                 <div class="text-[18px] font-bold tracking-[0.18em]">°C</div>
               </div>
-              <!-- legacy target (hidden) so your old JS can write too -->
               <div id="temp" class="hidden"></div>
             </div>
 
@@ -137,7 +160,7 @@
             </div>
           </div>
 
-          <!-- Jacket Meter (driven by pressure) -->
+          <!-- Jacket Meter -->
           <div class="mt-10">
             <div class="text-[12px] font-semibold uppercase tracking-[0.22em] text-slate-700/75">
               Jacket Meter
@@ -159,7 +182,6 @@
             Conditions may change — check again before heading out.
           </div>
 
-          <!-- Key status note (from your legacy JS) -->
           <div id="keyNote" class="mt-3 text-center text-[10px] text-slate-700/55"></div>
         </div>
 
@@ -187,7 +209,6 @@
 
     /* ---------- PRESSURE -> THEME + METER ---------- */
     function levelFromPressure(hPa) {
-      // darker as pressure drops
       if (hPa >= 1018) return 1;
       if (hPa >= 1008) return 2;
       return 3;
@@ -244,12 +265,8 @@
       return { time: `${h}:${m}`, ampm };
     }
 
-    /* --------------------------------------------------------------------
-       index.js — legacy weather widget (restored & cleaned)
-       Integrated + mapped to this UI (pressure-based + extra fields)
-    -------------------------------------------------------------------- */
+    /* ---------- WEATHER (OpenWeather) ---------- */
     const CITY = "Vancouver";
-
     const FALLBACK_KEY = "736185ae3214d80248deba0bc59a9c16";
     const API_KEY = (window.INDEX_API_KEY && window.INDEX_API_KEY.trim())
       ? window.INDEX_API_KEY
@@ -257,42 +274,25 @@
         ? window.WEATHER_API_KEY
         : FALLBACK_KEY;
 
-    // Reveal key status in console and UI
     (function showKeyStatus() {
       const note = document.getElementById('keyNote');
       if (API_KEY && API_KEY !== FALLBACK_KEY) {
-        console.info('[index] Using API key provided on page (masked):', API_KEY.slice(0,4) + '...' + API_KEY.slice(-4));
-        if (note) note.textContent = 'Using API key provided on page (masked): ' + API_KEY.slice(0,4) + '...' + API_KEY.slice(-4);
+        if (note) note.textContent = 'Using page API key (masked): ' + API_KEY.slice(0,4) + '...' + API_KEY.slice(-4);
       } else if (API_KEY === FALLBACK_KEY) {
-        console.info('[index] Using fallback (embedded) API key — you can set window.INDEX_API_KEY to override.');
-        if (note) note.textContent = 'Using fallback embedded API key. For production, set a page key (window.INDEX_API_KEY).';
+        if (note) note.textContent = 'Using fallback embedded API key. For production, set window.INDEX_API_KEY.';
       } else {
-        console.info('[index] No API key available.');
-        if (note) note.textContent = 'No API key provided — page is in demo mode.';
+        if (note) note.textContent = 'No API key provided — demo mode.';
       }
     })();
 
     async function getWeather() {
       try {
         const url = `https://api.openweathermap.org/data/2.5/weather?q=${encodeURIComponent(CITY)}&units=metric&appid=${API_KEY}`;
-        console.debug('[index] Fetching weather:', url);
         const res = await fetch(url);
 
         if (!res.ok) {
-          let body = '';
-          try { body = await res.text(); } catch (e) {}
-          console.warn('[index] Weather fetch failed', res.status, body);
-
           const descEl = document.getElementById('desc');
-          if (res.status === 401 || res.status === 403) {
-            if (descEl) descEl.textContent = 'API key invalid or not authorized (401/403).';
-          } else if (res.status === 429) {
-            if (descEl) descEl.textContent = 'Rate limit exceeded (429).';
-          } else {
-            if (descEl) descEl.textContent = `Weather request failed (status ${res.status}).`;
-          }
-
-          document.body.classList.add('app-off');
+          if (descEl) descEl.textContent = `Weather request failed (${res.status}).`;
           return;
         }
 
@@ -303,22 +303,13 @@
         const pressure = Math.round(data.main.pressure);
 
         const desc = data.weather[0].description;
-        const weatherId = data.weather[0].id;
 
-        // Update UI
         document.getElementById("city").textContent = data.name ?? CITY;
-
-        // legacy element (#temp) + new element (#tempValue)
-        const tempLegacy = document.getElementById("temp");
-        if (tempLegacy) tempLegacy.textContent = `${temp}°C`;
-        const tempNew = document.getElementById("tempValue");
-        if (tempNew) tempNew.textContent = `${temp}`;
-
+        document.getElementById("tempValue").textContent = `${temp}`;
         document.getElementById("desc").textContent = desc;
         document.getElementById("humidityValue").textContent = `${humidity}`;
         document.getElementById("pressureValue").textContent = `${pressure}`;
 
-        // Sunset
         const sunsetUnix = data.sys?.sunset;
         if (sunsetUnix) {
           const s = formatTo12h(new Date(sunsetUnix * 1000));
@@ -329,76 +320,22 @@
           document.getElementById("sunsetAmpm").textContent = "—";
         }
 
-        // Keep your legacy background (optional classes)
-        updateBackground(weatherId);
-
-        // Pressure-based theme + meter (darkens as level goes up)
         const level = levelFromPressure(pressure);
         applyTheme(level);
         setMeter(meterFromPressure(pressure));
-
-        // Always display after successful fetch
-        switchOnApp();
-
-        // Advisory class only
-        if (!shouldAppBeOn(temp, desc)) {
-          document.body.classList.add('app-off');
-          console.info('[index] Advisory: app-off status set (conditions not met)');
-        } else {
-          document.body.classList.remove('app-off');
-          console.info('[index] Advisory: app-on status');
-        }
-
       } catch (err) {
-        console.error('[index] Fetch error', err);
         const descEl = document.getElementById("desc");
         if (descEl) descEl.textContent = "Network error while fetching weather";
       }
     }
 
-    function switchOffApp() {
-      document.body.classList.add('app-off');
-      console.debug('[index] switchOffApp invoked — advisory class applied (widget kept visible)');
-    }
-
-    function switchOnApp() {
-      const el = document.getElementById("weather-app");
-      if (el) el.style.display = "block";
-      document.body.classList.remove("app-off");
-    }
-
-    function shouldAppBeOn(temp, desc) {
-      return temp >= 10 && desc.toLowerCase().includes("rain");
-    }
-
-    function updateBackground(weatherId) {
-      document.body.classList.remove('bg-heavy-rain','bg-drizzle','bg-rain','bg-snow','bg-clear');
-      if (weatherId >= 200 && weatherId < 300) {
-        document.body.classList.add('bg-heavy-rain');
-      } else if (weatherId >= 300 && weatherId < 500) {
-        document.body.classList.add('bg-drizzle');
-      } else if (weatherId >= 500 && weatherId < 531) {
-        document.body.classList.add('bg-rain');
-      } else if (weatherId >= 600 && weatherId < 700) {
-        document.body.classList.add('bg-snow');
-      } else if (weatherId === 800) {
-        document.body.classList.add('bg-clear');
-      }
-    }
-
     window.addEventListener('DOMContentLoaded', () => {
-      // initial look so it isn't blank before fetch
       applyTheme(1);
       setMeter(20);
 
-      // hook up refresh
       const refresh = document.getElementById('refreshBtn');
       if (refresh) refresh.addEventListener('click', getWeather);
 
-      const legacy = document.getElementById('legacyRefreshBtn');
-      if (legacy) legacy.addEventListener('click', getWeather);
-
-      // run once to initialize
       getWeather();
     });
   </script>
