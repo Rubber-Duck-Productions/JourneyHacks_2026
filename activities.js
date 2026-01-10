@@ -152,14 +152,36 @@ async function findNearbyPlaces(lat, lng, radius = DEFAULT_SEARCH_RADIUS) {
         if (!seen.has(p.place_id)) { seen.add(p.place_id); unique.push(p); }
       }
 
-      // enrich details via JS API getDetails when possible
+      // enrich details via JS API getDetails when possible (fetches real Google Maps reviews)
       const picks = unique.slice(0, 10);
       const enriched = await Promise.all(picks.map(async p => {
         try {
           return await new Promise((resolve) => {
-            svc.getDetails({ placeId: p.place_id, fields: ['name','rating','user_ratings_total','reviews','formatted_address','geometry','place_id'] }, (res, status) => {
-              if (status === google.maps.places.PlacesServiceStatus.OK && res) resolve({ ...p, ...res });
-              else resolve(p);
+            svc.getDetails({ 
+              placeId: p.place_id, 
+              fields: [
+                'name',
+                'rating',
+                'user_ratings_total',
+                'reviews',
+                'formatted_address',
+                'geometry',
+                'place_id',
+                'vicinity',
+                'types',
+                'opening_hours',
+                'price_level',
+                'photos'
+              ] 
+            }, (res, status) => {
+              if (status === google.maps.places.PlacesServiceStatus.OK && res) {
+                // Merge with original, preserving real reviews
+                const merged = { ...p, ...res };
+                if (res.reviews && Array.isArray(res.reviews)) {
+                  merged.reviews = res.reviews; // Real Google Maps reviews
+                }
+                resolve(merged);
+              } else resolve(p);
             });
           });
         } catch (e) {
@@ -249,15 +271,27 @@ async function findNearbyPlaces(lat, lng, radius = DEFAULT_SEARCH_RADIUS) {
 
     const places = uniquePlaces.slice(0, 10); // Return top 10 places
     
-    // Fetch place details with reviews for each place (with error handling)
+    // Fetch place details with real Google Maps reviews for each place (with error handling)
     // Store original places to use as fallback
     const placesWithReviews = await Promise.allSettled(
       places.map(async (place, index) => {
         const originalPlace = place; // Store reference
+        // Skip demo places - they don't have real reviews
+        if (!place.place_id || place.place_id.startsWith('demo_')) {
+          return originalPlace;
+        }
         try {
           const details = await getPlaceDetails(place.place_id);
           if (details) {
-            return { ...place, reviews: details.reviews || [], user_ratings_total: details.user_ratings_total || place.user_ratings_total };
+            // Merge details, preserving real Google Maps reviews
+            const merged = { ...place, ...details };
+            if (details.reviews && Array.isArray(details.reviews)) {
+              merged.reviews = details.reviews; // Real Google Maps reviews
+            }
+            if (details.user_ratings_total) {
+              merged.user_ratings_total = details.user_ratings_total;
+            }
+            return merged;
           }
         } catch (err) {
           console.warn(`[activities] Error fetching details for ${place.name}:`, err);
@@ -284,15 +318,38 @@ async function findNearbyPlaces(lat, lng, radius = DEFAULT_SEARCH_RADIUS) {
 }
 
 // Fetch place details including reviews (prefer JS API)
+// This function fetches real Google Maps reviews
 async function getPlaceDetails(placeId) {
   if (!placeId) return null;
 
   const svc = await ensureActivitiesPlacesService();
   if (svc) {
     return new Promise((resolve) => {
-      svc.getDetails({ placeId, fields: ['name','rating','user_ratings_total','reviews','formatted_address','geometry','place_id'] }, (res, status) => {
-        if (status === google.maps.places.PlacesServiceStatus.OK && res) resolve(res);
-        else {
+      // Request comprehensive fields including reviews for real Google Maps data
+      svc.getDetails({ 
+        placeId, 
+        fields: [
+          'name',
+          'rating',
+          'user_ratings_total',
+          'reviews',
+          'formatted_address',
+          'geometry',
+          'place_id',
+          'vicinity',
+          'types',
+          'opening_hours',
+          'price_level',
+          'photos'
+        ] 
+      }, (res, status) => {
+        if (status === google.maps.places.PlacesServiceStatus.OK && res) {
+          // Log when we get real reviews
+          if (res.reviews && Array.isArray(res.reviews)) {
+            console.log(`[activities] Fetched ${res.reviews.length} real reviews for ${res.name}`);
+          }
+          resolve(res);
+        } else {
           console.warn('[activities] getDetails JS API failed', status);
           resolve(null);
         }
@@ -305,11 +362,22 @@ async function getPlaceDetails(placeId) {
   if (!apiKey || apiKey === 'AIzaSyDummyKey' || !apiKey.trim()) return null;
 
   try {
-    const url = `https://maps.googleapis.com/maps/api/place/details/json?place_id=${placeId}&fields=name,rating,user_ratings_total,reviews,formatted_address,geometry,place_id&key=${apiKey}`;
+    // Request reviews field for real Google Maps reviews
+    const url = `https://maps.googleapis.com/maps/api/place/details/json?place_id=${placeId}&fields=name,rating,user_ratings_total,reviews,formatted_address,geometry,place_id,vicinity,types,opening_hours,price_level,photos&key=${apiKey}`;
     const response = await fetch(url);
-    if (!response.ok) return null;
+    if (!response.ok) {
+      console.warn('[activities] getPlaceDetails REST response not ok:', response.status);
+      return null;
+    }
     const data = await response.json();
-    if (data.status === 'OK' && data.result) return data.result;
+    if (data.status === 'OK' && data.result) {
+      // Log when we get real reviews
+      if (data.result.reviews && Array.isArray(data.result.reviews)) {
+        console.log(`[activities] Fetched ${data.result.reviews.length} real reviews for ${data.result.name} via REST`);
+      }
+      return data.result;
+    }
+    console.warn('[activities] getPlaceDetails REST status not OK:', data.status);
     return null;
   } catch (e) {
     console.warn('[activities] getPlaceDetails REST error', e);

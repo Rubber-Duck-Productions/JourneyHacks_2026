@@ -284,14 +284,36 @@
     }
 
     // Get place details using the JS API if available, otherwise fall back to REST (best-effort)
+    // This function fetches real reviews from Google Maps Places API
     async function getPlaceDetails(placeId) {
       if (!placeId) return null;
 
       const svc = await ensurePlacesService();
       if (svc) {
         return new Promise((resolve) => {
-          svc.getDetails({ placeId, fields: ['name', 'rating', 'user_ratings_total', 'reviews', 'formatted_address', 'geometry', 'place_id'] }, (res, status) => {
+          // Request comprehensive fields including reviews, photos, and all relevant data
+          svc.getDetails({ 
+            placeId, 
+            fields: [
+              'name', 
+              'rating', 
+              'user_ratings_total', 
+              'reviews', 
+              'formatted_address', 
+              'geometry', 
+              'place_id',
+              'vicinity',
+              'types',
+              'opening_hours',
+              'price_level',
+              'photos'
+            ] 
+          }, (res, status) => {
             if (status === google.maps.places.PlacesServiceStatus.OK && res) {
+              // Ensure reviews array exists (real Google Maps reviews)
+              if (res.reviews && Array.isArray(res.reviews)) {
+                console.log(`[plan] Fetched ${res.reviews.length} real reviews for ${res.name}`);
+              }
               resolve(res);
             } else {
               console.warn('[plan] Places getDetails failed', status);
@@ -306,11 +328,22 @@
       if (!apiKey || !apiKey.trim() || apiKey === 'AIzaSyDummyKey') return null;
 
       try {
-        const url = `https://maps.googleapis.com/maps/api/place/details/json?place_id=${placeId}&fields=name,rating,user_ratings_total,reviews,formatted_address,geometry,place_id&key=${apiKey}`;
+        // Request reviews field for real Google Maps reviews
+        const url = `https://maps.googleapis.com/maps/api/place/details/json?place_id=${placeId}&fields=name,rating,user_ratings_total,reviews,formatted_address,geometry,place_id,vicinity,types,opening_hours,price_level,photos&key=${apiKey}`;
         const response = await fetch(url);
-        if (!response.ok) return null;
+        if (!response.ok) {
+          console.warn('[plan] getPlaceDetails REST response not ok:', response.status);
+          return null;
+        }
         const data = await response.json();
-        if (data.status === 'OK' && data.result) return data.result;
+        if (data.status === 'OK' && data.result) {
+          // Log when we get real reviews
+          if (data.result.reviews && Array.isArray(data.result.reviews)) {
+            console.log(`[plan] Fetched ${data.result.reviews.length} real reviews for ${data.result.name} via REST`);
+          }
+          return data.result;
+        }
+        console.warn('[plan] getPlaceDetails REST status not OK:', data.status);
         return null;
       } catch (e) {
         console.warn('[plan] getPlaceDetails REST error', e);
@@ -493,7 +526,12 @@
       const rating = place.rating != null ? Number(place.rating).toFixed(1) : "—";
       const total = place.user_ratings_total != null ? place.user_ratings_total : "";
       const address = place.formatted_address || place.vicinity || "";
-      const topReview = (place.reviews && place.reviews[0] && place.reviews[0].text) ? place.reviews[0] : null;
+      // Get the best/most relevant review (real Google Maps review)
+      const reviews = place.reviews && Array.isArray(place.reviews) ? place.reviews : [];
+      const topReview = reviews.length > 0 && reviews[0].text ? reviews[0] : null;
+      
+      // Check if this is a real place (not demo)
+      const isRealPlace = place.place_id && !place.place_id.startsWith('demo_');
 
       const mapsUrl = place.place_id
         ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(place.name || "place")}&query_place_id=${encodeURIComponent(place.place_id)}`
@@ -516,10 +554,15 @@
 
               ${topReview ? `
                 <div class="mt-3 rounded-[14px] bg-black/5 p-3">
-                  <div class="text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-700/70">Quick take</div>
-                  <div class="mt-1 text-[11px] text-slate-800/80">
-                    “${escapeHtml(String(topReview.text).slice(0, 140))}${topReview.text && topReview.text.length > 140 ? "…" : ""}”
+                  <div class="flex items-center justify-between mb-1">
+                    <div class="text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-700/70">${isRealPlace ? 'Real review' : 'Quick take'}</div>
+                    ${topReview.rating ? `<div class="text-[10px] text-slate-700/70">⭐ ${topReview.rating}/5</div>` : ''}
                   </div>
+                  ${topReview.author_name ? `<div class="text-[9px] text-slate-600/70 mb-1">${escapeHtml(topReview.author_name)}${topReview.relative_time_description ? ` • ${escapeHtml(topReview.relative_time_description)}` : ''}</div>` : ''}
+                  <div class="mt-1 text-[11px] text-slate-800/80">
+                    "${escapeHtml(String(topReview.text).slice(0, 140))}${topReview.text && topReview.text.length > 140 ? "…" : ""}"
+                  </div>
+                  ${reviews.length > 1 ? `<div class="mt-2 text-[9px] text-slate-600/60">+${reviews.length - 1} more review${reviews.length > 2 ? 's' : ''}</div>` : ''}
                 </div>
               ` : ""}
             </div>
@@ -780,11 +823,11 @@
       // Check for JS Places support
       const svc = await ensurePlacesService();
       if (svc) {
-        if (status) status.textContent = 'Using Google Places JS for live place results.';
+        if (status) status.textContent = 'Using Google Places JS for real-world activities with real reviews.';
       } else if (window.GOOGLE_MAPS_API_KEY && window.GOOGLE_MAPS_API_KEY.trim() && window.GOOGLE_MAPS_API_KEY !== 'AIzaSyDummyKey') {
-        if (status) status.textContent = 'Google Maps key detected; using REST Places (may be blocked by browser CORS).';
+        if (status) status.textContent = 'Google Maps key detected; using REST Places for real activities (may be blocked by browser CORS).';
       } else {
-        if (status) status.textContent = 'No Google Maps key — showing curated demo picks.';
+        if (status) status.textContent = 'No Google Maps key — showing demo picks. Add window.GOOGLE_MAPS_API_KEY for real activities and reviews.';
       }
 
       // Queries for each part
@@ -835,12 +878,28 @@
       const dinnerPlaces = normalizeResults(dinnerRes.value).slice(0, 6);
       const relaxPlaces  = normalizeResults(relaxRes.value).slice(0, 8);
 
-      // Fetch details (reviews) best-effort
+      // Fetch details (reviews) - ensures we get real Google Maps reviews
       async function enrich(list) {
-        const picks = list.slice(0, 4);
+        const picks = list.slice(0, 5); // Get more to ensure we have enough with reviews
         const settled = await Promise.allSettled(picks.map(async p => {
-          const details = await getPlaceDetails(p.place_id || p.place_id || p.placeId);
-          return details ? { ...p, ...details } : p;
+          const placeId = p.place_id || p.placeId;
+          if (!placeId || placeId.startsWith('demo_')) {
+            // Skip demo places - they don't have real reviews
+            return p;
+          }
+          const details = await getPlaceDetails(placeId);
+          if (details) {
+            // Merge details, preserving reviews from Google Maps
+            const enriched = { ...p, ...details };
+            // Ensure reviews are preserved (real Google Maps reviews)
+            if (details.reviews && Array.isArray(details.reviews)) {
+              enriched.reviews = details.reviews;
+            }
+            return enriched;
+          }
+          // If details fetch failed, return original but log it
+          console.warn(`[plan] Could not fetch details for ${p.name}, using basic info`);
+          return p;
         }));
         return settled
           .filter(x => x.status === "fulfilled" && x.value)
@@ -857,7 +916,18 @@
       const dinners = (dinnerEn.status === "fulfilled" ? dinnerEn.value : dinnerPlaces).slice(0,3);
       const relaxes = (relaxEn.status === "fulfilled" ? relaxEn.value : relaxPlaces).slice(0,3);
 
-      if (status) status.textContent = "Plan curated from Places results (best-effort).";
+      // Count how many places have real reviews
+      const placesWithReviews = [...cafes, ...dinners, ...relaxes].filter(p => 
+        p.reviews && Array.isArray(p.reviews) && p.reviews.length > 0 && !p.place_id?.startsWith('demo_')
+      ).length;
+      
+      if (status) {
+        if (placesWithReviews > 0) {
+          status.textContent = `Plan curated with real Google Maps activities (${placesWithReviews} with reviews).`;
+        } else {
+          status.textContent = "Plan curated from Google Places results.";
+        }
+      }
 
       setList("cafeState", "cafeList",   { places: cafes, userLat, userLng });
       setList("dinnerState", "dinnerList",{ places: dinners, userLat, userLng });
