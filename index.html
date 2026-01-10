@@ -1,82 +1,253 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>JourneyHacks — Map & Weather</title>
-  <link rel="stylesheet" href="index.css" />
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Grey Day — Map & Weather</title>
+
+  <!-- Leaflet -->
   <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <style>
+    .grain::before{
+      content:"";
+      position:absolute;
+      inset:0;
+      pointer-events:none;
+      opacity:.18;
+      mix-blend-mode:overlay;
+      background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='260' height='260'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='260' height='260' filter='url(%23n)' opacity='.55'/%3E%3C/svg%3E");
+    }
+    .caps{letter-spacing:.22em;}
+  </style>
 </head>
-<body>
-  <header class="site-header">
-    <div class="container">
-      <h1>JourneyHacks</h1>
-      <p class="tagline">Map + Weather (demo)</p>
+
+<body class="min-h-screen bg-slate-950 text-slate-900">
+  <div class="relative min-h-screen overflow-hidden">
+
+    <!-- Background (same as Today’s Plan) -->
+    <div class="absolute inset-0">
+      <div class="absolute -left-32 top-10 h-[520px] w-[520px] rounded-full bg-cyan-300/25 blur-[90px]"></div>
+      <div class="absolute left-40 top-24 h-[540px] w-[540px] rounded-full bg-sky-600/25 blur-[100px]"></div>
+      <div class="absolute right-[-140px] bottom-[-140px] h-[620px] w-[620px] rounded-full bg-slate-900/70 blur-[80px]"></div>
+      <div class="absolute inset-0 bg-gradient-to-b from-black/10 via-black/30 to-black/70"></div>
+      <div class="grain absolute inset-0"></div>
     </div>
-  </header>
 
-  <main class="app">
-    <section id="map" aria-label="Map"></section>
+    <!-- Content -->
+    <div class="relative mx-auto max-w-6xl px-6 py-8">
 
-    <aside class="panel" aria-label="Controls">
-      <form id="searchForm">
-        <label for="search" class="visually-hidden">Search city</label>
-        <input id="search" name="q" placeholder="Search city (e.g., Vancouver)" />
-        <div class="row">
-          <button id="searchBtn" type="submit">Search</button>
-          <button id="locateBtn" type="button">Use my location</button>
+      <!-- Top bar (3 buttons left, logo center, search right, profile far right) -->
+      <nav class="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+
+        <!-- Left buttons -->
+        <div class="flex flex-wrap items-center gap-2">
+          <button id="favouritesBtn"
+            class="rounded-full bg-white/10 px-4 py-2 text-[12px] font-semibold text-white/80 hover:bg-white/15 active:bg-white/20 transition">
+            Favourites
+          </button>
+          <button id="todaysPlanBtn"
+            class="rounded-full bg-white/10 px-4 py-2 text-[12px] font-semibold text-white/80 hover:bg-white/15 active:bg-white/20 transition">
+            Today's Plan
+          </button>
+          <button id="weatherBtn"
+            class="rounded-full bg-white/10 px-4 py-2 text-[12px] font-semibold text-white/80 hover:bg-white/15 active:bg-white/20 transition">
+            Weather
+          </button>
         </div>
-      </form>
 
-      <div id="weather-app">
-        <div class="weather-card" role="region" aria-labelledby="city">
-          <h2 id="city">Vancouver</h2>
-          <p id="temp" class="temp">--°C</p>
-          <p id="desc" class="desc">Loading...</p>
-          <div class="row">
-            <button id="refreshBtn">Refresh</button>
-            <button id="legacyRefreshBtn" type="button">Legacy Refresh</button>
+        <!-- Center logo -->
+        <div class="flex items-center justify-center">
+          <div class="text-[12px] font-semibold uppercase caps text-white/75 hidden md:block">Grey Day</div>
+          <div class="md:hidden text-[14px] font-extrabold tracking-tight text-white">Grey Day</div>
+        </div>
+
+        <!-- Right search + profile -->
+        <div class="flex items-center gap-2 justify-end">
+          <form id="searchForm" class="w-full md:w-[420px]" role="search">
+            <label for="search" class="sr-only">Search city</label>
+            <input
+              id="search"
+              name="q"
+              placeholder="Search city (e.g., Vancouver)"
+              class="w-full rounded-full bg-white/55 backdrop-blur-xl ring-1 ring-white/25 px-4 py-2.5 text-[12px] text-slate-950 placeholder:text-slate-600/70 outline-none focus:ring-2 focus:ring-cyan-500/40"
+            />
+          </form>
+
+          <button id="profileBtn" aria-label="Profile"
+            class="shrink-0 rounded-full bg-white/10 p-2.5 text-white/80 hover:bg-white/15 active:bg-white/20 transition">
+            <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M12 12C14.7614 12 17 9.76142 17 7C17 4.23858 14.7614 2 12 2C9.23858 2 7 4.23858 7 7C7 9.76142 9.23858 12 12 12Z"
+                stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              <path d="M20.59 22C20.59 18.13 16.74 15 12 15C7.26 15 3.41 18.13 3.41 22"
+                stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </button>
+
+          <!-- Optional: keep your mobile menu id hooks (no dropdown UI here to keep clean) -->
+          <button id="mobileMenuBtn" aria-label="Menu" aria-expanded="false"
+            class="md:hidden rounded-full bg-white/10 px-4 py-2 text-[12px] font-semibold text-white/80 hover:bg-white/15 active:bg-white/20 transition">
+            Menu
+          </button>
+        </div>
+      </nav>
+
+      <!-- Header line (small) -->
+      <div class="mt-6 flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+        <div>
+          <div class="text-[12px] font-semibold uppercase caps text-white/75">Map + Weather</div>
+          <div class="mt-2 text-[34px] leading-none font-black tracking-tight text-white">
+            Explore with <span class="text-white/90">weather context</span>
           </div>
+          <div class="mt-3 text-[11px] text-white/55 max-w-[56ch]">
+            Search a city, drop pins, refresh the weather, and find rainy-day activities nearby.
+          </div>
+        </div>
+
+        <!-- Quick actions (connects to your existing ids) -->
+        <div class="flex flex-wrap items-center gap-2">
+          <button id="searchBtn" type="submit" form="searchForm"
+            class="rounded-full bg-white/10 px-4 py-2 text-[12px] font-semibold text-white/80 hover:bg-white/15 active:bg-white/20 transition">
+            Search
+          </button>
+          <button id="locateBtn" type="button"
+            class="rounded-full bg-white/10 px-4 py-2 text-[12px] font-semibold text-white/80 hover:bg-white/15 active:bg-white/20 transition">
+            Use my location
+          </button>
         </div>
       </div>
 
-      <div id="activities-app">
-        <div class="activities-card" role="region" aria-labelledby="activities-title">
-          <div class="activities-header">
-            <h2 id="activities-title">🌧️ Rainy Day Activities</h2>
-            <div class="distance-meter">
-              <span class="distance-label">Distance:</span>
-              <span id="distance-display">--</span>
+      <!-- Main grid: Map + Panel -->
+      <div class="mt-8 grid grid-cols-1 lg:grid-cols-[1fr_420px] gap-6 items-stretch">
+
+        <!-- MAP CARD -->
+        <section class="rounded-[26px] bg-white/55 backdrop-blur-xl ring-1 ring-white/25 shadow-[0_20px_60px_rgba(0,0,0,0.35)] overflow-hidden">
+          <div class="px-6 pt-6 pb-4 border-b border-black/10">
+            <div class="flex items-center justify-between gap-3">
+              <div>
+                <div class="text-[11px] font-semibold uppercase caps text-slate-800/80">Map</div>
+                <h2 class="mt-1 text-[20px] font-extrabold tracking-tight text-slate-950">Your area</h2>
+              </div>
+              <div class="text-[10px] text-slate-700/60">
+                Tip: click the map to explore
+              </div>
             </div>
           </div>
-          <div class="search-radius-info">
-            <span class="radius-badge">🔍 Search radius: 5km</span>
+
+          <!-- Leaflet map container (keep ID!) -->
+          <div id="map" class="h-[58vh] lg:h-[78vh] w-full"></div>
+        </section>
+
+        <!-- PANEL CARD -->
+        <aside class="rounded-[26px] bg-white/55 backdrop-blur-xl ring-1 ring-white/25 shadow-[0_20px_60px_rgba(0,0,0,0.35)] overflow-hidden">
+          <div class="px-6 pt-6 pb-4 border-b border-black/10">
+            <div class="flex items-start justify-between gap-3">
+              <div>
+                <div class="text-[11px] font-semibold uppercase caps text-slate-800/80">Today’s vibe</div>
+                <h2 class="mt-1 text-[20px] font-extrabold tracking-tight text-slate-950">Weather + Activities</h2>
+              </div>
+              <button id="refreshBtn"
+                class="rounded-full bg-black/10 px-3 py-1 text-[11px] font-semibold text-slate-800/80 hover:bg-black/15 active:bg-black/20 transition"
+                type="button">
+                Refresh
+              </button>
+            </div>
+            <p id="statusNote" class="mt-2 text-[11px] text-slate-700/70">
+              Status: waiting
+            </p>
           </div>
-          <button id="findActivitiesBtn" type="button" class="activity-btn">Find Activities Near Me</button>
-          <div id="activities-list" class="activities-list"></div>
-          <div id="activities-loading" class="loading" style="display:none;">Finding activities...</div>
-        </div>
+
+          <div class="p-6 space-y-5">
+            <!-- Weather block (keep IDs!) -->
+            <div id="weather-app" class="rounded-[18px] bg-white/45 ring-1 ring-black/10 p-4">
+              <div class="flex items-start justify-between gap-3">
+                <div>
+                  <div class="text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-700/70">City</div>
+                  <div id="city" class="mt-1 text-[18px] font-extrabold tracking-tight text-slate-950">Vancouver</div>
+                  <div id="desc" class="mt-1 text-[12px] text-slate-700/70">Loading...</div>
+                </div>
+
+                <div class="text-right">
+                  <div class="text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-700/70">Temp</div>
+                  <div id="temp" class="mt-1 text-[30px] font-black tracking-tight text-slate-950">--°C</div>
+                </div>
+              </div>
+
+              <div class="mt-4 flex flex-wrap gap-2">
+                <button id="legacyRefreshBtn" type="button"
+                  class="rounded-full bg-black/10 px-4 py-2 text-[12px] font-semibold text-slate-800/80 hover:bg-black/15 active:bg-black/20 transition">
+                  Legacy Refresh
+                </button>
+
+                <button id="testKeyBtn" type="button"
+                  class="rounded-full bg-black/10 px-4 py-2 text-[12px] font-semibold text-slate-800/80 hover:bg-black/15 active:bg-black/20 transition">
+                  Test API Key
+                </button>
+              </div>
+            </div>
+
+            <!-- Activities block (keep IDs!) -->
+            <div id="activities-app" class="rounded-[18px] bg-white/45 ring-1 ring-black/10 p-4">
+              <div class="flex items-start justify-between gap-3">
+                <div>
+                  <div class="text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-700/70">Rainy day</div>
+                  <div id="activities-title" class="mt-1 text-[16px] font-extrabold tracking-tight text-slate-950">
+                    🌧️ Activities near you
+                  </div>
+                </div>
+
+                <div class="text-right">
+                  <div class="text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-700/70">Distance</div>
+                  <div class="mt-1 text-[12px] font-semibold text-slate-900/70">
+                    <span id="distance-display">--</span>
+                  </div>
+                </div>
+              </div>
+
+              <div class="mt-3">
+                <span class="inline-flex items-center rounded-full bg-black/5 px-3 py-1 text-[11px] font-semibold text-slate-700/70 ring-1 ring-black/10">
+                  🔍 Search radius: 5km
+                </span>
+              </div>
+
+              <button id="findActivitiesBtn" type="button"
+                class="mt-4 w-full rounded-full bg-black/10 px-4 py-3 text-[12px] font-semibold text-slate-900 hover:bg-black/15 active:bg-black/20 transition">
+                Find Activities Near Me
+              </button>
+
+              <div id="activities-loading" class="mt-4 text-[12px] text-slate-700/70" style="display:none;">
+                Finding activities...
+              </div>
+
+              <div id="activities-list" class="mt-4 space-y-3"></div>
+            </div>
+
+            <!-- Notes -->
+            <p id="keyNote" class="text-[10px] text-slate-700/60">
+              Demo mode: no API key provided — add an OpenWeatherMap key in maps.js to fetch live data.
+            </p>
+
+            <p class="text-[10px] text-slate-700/55">
+              💡 For rainy day activities: Set <code class="rounded bg-black/10 px-1.5 py-0.5">window.GOOGLE_MAPS_API_KEY</code> and
+              <code class="rounded bg-black/10 px-1.5 py-0.5">window.GEMINI_API_KEY</code>.
+            </p>
+          </div>
+        </aside>
       </div>
 
-      <p class="note" id="keyNote">Demo mode: no API key provided — add an OpenWeatherMap key in <code>maps.js</code> to fetch live data.</p>
-      <p class="note" id="statusNote">Status: waiting</p>
-      <div class="row" style="margin-top:8px">
-        <button id="testKeyBtn" type="button">Test API Key</button>
+      <div class="mt-8 text-center text-[11px] tracking-wide text-white/45">
+        Grey Day • JourneyHacks
       </div>
-      <p class="note" style="margin-top:12px;font-size:11px;color:#9ca3af">
-        💡 For rainy day activities: Set <code>window.GOOGLE_MAPS_API_KEY</code> and <code>window.GEMINI_API_KEY</code> in the script tag above.
-      </p>
-    </aside>
-  </main>
+    </div>
+  </div>
 
+  <!-- Scripts (unchanged) -->
   <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
   <script>
     // Optional: set your API keys here BEFORE loading `maps.js` and `index.js`.
     // Example (put this inline in the HTML):
-    // window.WEATHER_API_KEY = 'your_openweathermap_key';
-    // window.INDEX_API_KEY = 'your_openweathermap_key';
-    // window.GOOGLE_MAPS_API_KEY = 'your_google_maps_key';
-    // window.GEMINI_API_KEY = 'your_gemini_key';
+    // <script>window.WEATHER_API_KEY = 'your_openweathermap_key'; window.INDEX_API_KEY = 'your_openweathermap_key'; window.GOOGLE_MAPS_API_KEY = 'your_google_maps_key'; window.GEMINI_API_KEY = 'your_gemini_key';</script>
     // Note: keys must be set before maps.js runs. If your key is restricted by referrer, ensure the current origin is allowed.
     
     // Load Google Maps API only if key is provided
@@ -90,5 +261,6 @@
   <script src="maps.js" defer></script>
   <script src="index.js" defer></script>
   <script src="activities.js" defer></script>
+  <script src="chatbot.js" defer></script> 
 </body>
 </html>

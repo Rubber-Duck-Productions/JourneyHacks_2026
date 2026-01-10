@@ -61,22 +61,39 @@ function initChatbot() {
   // Event listeners
   const toggle = document.getElementById('chatbotToggle');
   const close = document.getElementById('chatbotClose');
-  const window = document.getElementById('chatbotWindow');
+  const chatWindow = document.getElementById('chatbotWindow');
   const input = document.getElementById('chatbotInput');
   const send = document.getElementById('chatbotSend');
-  
+  const container = document.getElementById('gemini-chatbot');
+
+  // Toggle open/closed by adding/removing `.open` on container; CSS handles transition
   toggle.addEventListener('click', () => {
     isChatOpen = !isChatOpen;
-    window.style.display = isChatOpen ? 'flex' : 'none';
+    container.classList.toggle('open', isChatOpen);
+    toggle.setAttribute('aria-expanded', String(isChatOpen));
+
     if (isChatOpen) {
-      input.focus();
-      scrollToBottom();
+      // Delay to allow CSS expansion, then focus
+      setTimeout(() => {
+        input.focus();
+        scrollToBottom();
+      }, 220);
     }
   });
-  
+
   close.addEventListener('click', () => {
     isChatOpen = false;
-    window.style.display = 'none';
+    container.classList.remove('open');
+    toggle.setAttribute('aria-expanded', 'false');
+  });
+
+  // Close on Escape
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && isChatOpen) {
+      isChatOpen = false;
+      container.classList.remove('open');
+      toggle.setAttribute('aria-expanded', 'false');
+    }
   });
   
   // Send message on button click
@@ -136,15 +153,37 @@ async function handleSendMessage() {
 
 // Get current location from map or stored location
 function getCurrentLocation() {
-  // Try window.lastCoords first (set by maps.js)
-  if (window.lastCoords && window.lastCoords.lat && window.lastCoords.lng) {
-    return window.lastCoords;
+  // Normalize lastCoords (may have 'lon' or 'lng')
+  const lc = window.lastCoords;
+  if (lc && isFinite(lc.lat) && (isFinite(lc.lng) || isFinite(lc.lon))) {
+    return { lat: Number(lc.lat), lng: Number(lc.lng ?? lc.lon) };
   }
-  // Try currentUserLocation from activities.js (via window if exposed)
-  if (window.currentUserLocation && window.currentUserLocation.lat && window.currentUserLocation.lng) {
-    return window.currentUserLocation;
+  // Normalize currentUserLocation similarly
+  const cu = window.currentUserLocation;
+  if (cu && isFinite(cu.lat) && (isFinite(cu.lng) || isFinite(cu.lon))) {
+    return { lat: Number(cu.lat), lng: Number(cu.lng ?? cu.lon) };
   }
   return null;
+} 
+
+// Generate a simple demo response when Gemini key is not set
+function generateDemoResponse(userMessage, lat, lng, weatherDesc, city) {
+  const lowered = userMessage.toLowerCase();
+  let suggestions = [];
+  if (lowered.includes('coffee') || lowered.includes('cafe')) {
+    suggestions.push(`Try the cozy Coffee Shop downtown — great for working and just ${Math.round(Math.random()*5)+1} min from you.`);
+  }
+  if (lowered.includes('museum') || lowered.includes('indoor') || lowered.includes('rain')) {
+    suggestions.push(`The Local Museum is perfect on a rainy day. It has new exhibits and indoor cafes.`);
+  }
+  if (lowered.includes('date') || lowered.includes('romantic')) {
+    suggestions.push(`Consider a riverside dinner followed by a visit to the art gallery for a relaxed date night.`);
+  }
+  if (suggestions.length === 0) {
+    suggestions.push(`In ${city || 'your area'}, on a ${weatherDesc}, consider visiting a museum, cafe, or indoor market close by.`);
+    suggestions.push('Want something specific? Try asking about coffee, museums, dates, or indoor activities!');
+  }
+  return suggestions.join('\n');
 }
 
 // Add a message to the chat

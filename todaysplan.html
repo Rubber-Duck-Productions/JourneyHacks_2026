@@ -28,6 +28,7 @@
       window.GEMINI_API_KEY = "YOUR_GEMINI_KEY"; // optional
     </script>
   -->
+    
 </head>
 
 <body class="min-h-screen bg-slate-950 text-slate-900">
@@ -50,6 +51,7 @@
           <div class="text-[12px] font-semibold uppercase caps text-white/75">Today’s Plan</div>
           <div class="mt-2 text-[40px] leading-none font-black tracking-tight text-white">
             Curated for <span id="cityName" class="text-white/90">Vancouver</span>
+            <span id="weatherSummary" class="ml-4 text-[16px] font-semibold text-white/70">— • —</span>
           </div>
           <div class="mt-3 text-[12px] uppercase tracking-[0.22em] text-white/60">
             <span id="dateValue">—</span> • <span id="timeValue">—</span><span class="ml-1" id="ampmValue">—</span>
@@ -74,6 +76,13 @@
               type="button"
             >
               Refresh plan
+            </button>
+
+            <button id="testKeyBtn"
+              class="rounded-full bg-white/10 px-4 py-2 text-[12px] font-semibold text-white/80 hover:bg-white/15 active:bg-white/20 transition"
+              type="button"
+            >
+              Test API Key
             </button>
           </div>
 
@@ -462,6 +471,173 @@
     })();
 
     /* --------------------------------------------
+       Weather (OpenWeather) — reuse of index logic
+    -------------------------------------------- */
+    const WEATHER_DEFAULT = { lat: 49.2827, lng: -123.1207 };
+
+    function updateBackground(weatherId) {
+      document.body.classList.remove(
+        "weather-clear",
+        "weather-clouds",
+        "weather-rain",
+        "weather-snow"
+      );
+      if (weatherId >= 200 && weatherId < 600)
+        document.body.classList.add("weather-rain");
+      else if (weatherId >= 600 && weatherId < 700)
+        document.body.classList.add("weather-snow");
+      else if (weatherId === 800) document.body.classList.add("weather-clear");
+      else document.body.classList.add("weather-clouds");
+    }
+
+    function showWeatherError(msg) {
+      const status = document.getElementById("statusNote");
+      if (status) status.textContent = msg;
+      const summary = document.getElementById("weatherSummary");
+      if (summary) summary.textContent = "— • —";
+    }
+
+    function getDemoWeather() {
+      return {
+        coord: { lat: WEATHER_DEFAULT.lat, lon: WEATHER_DEFAULT.lng },
+        name: "Vancouver",
+        main: { temp: 8 },
+        weather: [{ id: 803, description: "Partly cloudy" }],
+      };
+    }
+
+    async function getWeatherByCoords(lat, lon) {
+      // choose key (same preference as index)
+      const key =
+        window.WEATHER_API_KEY && window.WEATHER_API_KEY.trim()
+          ? window.WEATHER_API_KEY
+          : window.INDEX_API_KEY && window.INDEX_API_KEY.trim()
+          ? window.INDEX_API_KEY
+          : null;
+
+      if (!key) {
+        console.info('[plan] No weather API key — using demo data');
+        updateWeatherUI(getDemoWeather());
+        return;
+      }
+
+      const url = `https://api.openweathermap.org/data/2.5/weather?lat=${lat}&lon=${lon}&units=metric&appid=${key}`;
+      console.debug('[plan] Fetching weather:', url);
+
+      try {
+        const res = await fetch(url);
+        if (!res.ok) {
+          let txt = '';
+          try { txt = await res.text(); } catch(e){}
+          console.warn('[plan] Weather fetch failed', res.status, txt);
+          if (res.status === 401 || res.status === 403) {
+            showWeatherError('API key invalid or not authorized (401/403).');
+          } else if (res.status === 429) {
+            showWeatherError('Rate limit exceeded (429).');
+          } else {
+            showWeatherError(`Weather request failed (status ${res.status}).`);
+          }
+          updateWeatherUI(getDemoWeather());
+          return;
+        }
+
+        const data = await res.json();
+        updateWeatherUI(data);
+      } catch (err) {
+        console.error('[plan] Weather fetch error', err);
+        showWeatherError('Network error while fetching weather.');
+        updateWeatherUI(getDemoWeather());
+      }
+    }
+
+    function updateWeatherUI(data) {
+      const temp = Math.round(data.main?.temp ?? 0);
+      const desc = data.weather?.[0]?.description ?? '—';
+      const city = data.name || document.getElementById('cityName')?.textContent || '—';
+
+      const summary = document.getElementById('weatherSummary');
+      const cityEl = document.getElementById('cityName');
+      if (summary) summary.textContent = `${temp}°C • ${desc}`;
+      if (cityEl) cityEl.textContent = city;
+
+      const weatherId = data.weather?.[0]?.id || 800;
+      updateBackground(weatherId);
+    }
+
+    async function testAPIKey() {
+      const key =
+        window.WEATHER_API_KEY && window.WEATHER_API_KEY.trim()
+          ? window.WEATHER_API_KEY
+          : window.INDEX_API_KEY && window.INDEX_API_KEY.trim()
+          ? window.INDEX_API_KEY
+          : null;
+      const note = document.getElementById('keyNote');
+      if (!key) {
+        const msg = 'No API key set. Add one via inline script before this HTML.';
+        console.info('[plan] ' + msg);
+        if (note) note.textContent = msg;
+        return;
+      }
+
+      const testUrl = `https://api.openweathermap.org/data/2.5/weather?q=London&units=metric&appid=${key}`;
+      console.debug('[plan] Testing API key with', testUrl);
+
+      try {
+        const res = await fetch(testUrl);
+        let info = '';
+        try { info = await res.text(); } catch(e) { info = ''; }
+
+        if (!res.ok) {
+          console.warn('[plan] Test request failed', res.status, info);
+          if (note) {
+            if (res.status === 401 || res.status === 403)
+              note.textContent = 'API key invalid or unauthorized (401/403).';
+            else if (res.status === 429)
+              note.textContent = 'Rate limit exceeded (429).';
+            else note.textContent = `Test request failed (status ${res.status}).`;
+          }
+          return;
+        }
+
+        const data = JSON.parse(info || '{}');
+        console.info('[plan] Test success', data);
+        if (note)
+          note.textContent = `API key looks OK — sample: ${data.name || 'Unknown'}, ${Math.round(data.main?.temp || 0)}°C`;
+      } catch (err) {
+        console.error('[plan] API key test error', err);
+        if (note) note.textContent = 'Network error while testing API key';
+      }
+    }
+
+    function tryAutoLocateOnLoad() {
+      const status = document.getElementById('statusNote');
+      if (!navigator.geolocation) {
+        const msg = 'Geolocation not supported by your browser.';
+        console.info('[plan] ' + msg);
+        if (status) status.textContent = msg;
+        // fallback
+        getWeatherByCoords(WEATHER_DEFAULT.lat, WEATHER_DEFAULT.lng);
+        return;
+      }
+
+      if (status) status.textContent = 'Locating… (allow the browser to share your location)';
+      navigator.geolocation.getCurrentPosition(
+        (pos) => {
+          const { latitude: lat, longitude: lon } = pos.coords;
+          console.info('[plan] Located user', lat, lon);
+          if (status) status.textContent = 'Using your location';
+          getWeatherByCoords(lat, lon);
+        },
+        (err) => {
+          console.warn('[plan] Geolocation failed', err);
+          if (status) status.textContent = 'Unable to determine location. Showing default location.';
+          getWeatherByCoords(WEATHER_DEFAULT.lat, WEATHER_DEFAULT.lng);
+        },
+        { timeout: 10000, maximumAge: 0 }
+      );
+    }
+
+    /* --------------------------------------------
        Curation logic: 3 parts, 3 items each
        NOTE: Google Places REST /json often blocks browser CORS.
        If blocked, we automatically show demo picks.
@@ -554,12 +730,14 @@
         async (pos) => {
           currentUserLocation = { lat: pos.coords.latitude, lng: pos.coords.longitude };
           if (status) status.textContent = "Location set. Curating…";
+          await getWeatherByCoords(pos.coords.latitude, pos.coords.longitude);
           await curatePlan();
         },
         async (err) => {
           console.warn("[plan] Geolocation error:", err);
           if (status) status.textContent = "Couldn’t get your location. Using Vancouver default.";
           currentUserLocation = { lat: 49.2827, lng: -123.1207 };
+          await getWeatherByCoords(49.2827, -123.1207);
           await curatePlan();
         },
         { enableHighAccuracy: true, timeout: 8000 }
@@ -576,8 +754,13 @@
       document.getElementById("refreshDinner").addEventListener("click", curatePlan);
       document.getElementById("refreshRelax").addEventListener("click", curatePlan);
 
+      const testBtn = document.getElementById('testKeyBtn');
+      if (testBtn) testBtn.addEventListener('click', testAPIKey);
+
       // default load (Vancouver fallback)
       currentUserLocation = { lat: 49.2827, lng: -123.1207 };
+      // try to get local weather (falls back to default)
+      tryAutoLocateOnLoad();
       curatePlan();
     });
   </script>
