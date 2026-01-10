@@ -1,5 +1,6 @@
 /* activities.js — Rainy Day Activities using Google Maps Places API and Gemini */
-
+// Note: do NOT hard-code API keys in source files. Set keys on the page as:
+// <script>window.GOOGLE_MAPS_API_KEY = 'YOUR_KEY'; window.GEMINI_API_KEY = 'YOUR_KEY';</script>
 let activitiesMarkers = [];
 let currentUserLocation = null;
 
@@ -35,12 +36,18 @@ function updateDistanceDisplay(distance) {
 // Default search radius in meters (5km)
 const DEFAULT_SEARCH_RADIUS = 5000; // 5km
 
+// Number of activities to auto-open popups for (staggered on load)
+// Increase this to open more popups automatically (e.g., 5 or 6)
+const AUTO_OPEN_POPUPS = 6;
+
 // Find nearby places using Google Maps Places API
 async function findNearbyPlaces(lat, lng, radius = DEFAULT_SEARCH_RADIUS) {
   const apiKey = window.GOOGLE_MAPS_API_KEY;
   
   if (!apiKey || apiKey === 'AIzaSyDummyKey' || !apiKey.trim()) {
     console.warn('[activities] No Google Maps API key provided, using demo activities');
+    const status = document.getElementById('statusNote');
+    if (status) status.textContent = 'No Google Maps key: showing demo activities.';
     return getDemoActivities(lat, lng);
   }
 
@@ -402,10 +409,27 @@ function displayActivities(places, userLat, userLng, suggestions = null) {
   const activitiesList = document.getElementById('activities-list');
   activitiesList.innerHTML = '';
 
+  // Filter out places with invalid coordinates (prevent Leaflet errors)
+  let filteredPlaces = places.filter(place => {
+    const lat = Number(place?.geometry?.location?.lat);
+    // Some APIs use 'lng' or 'lon'
+    const lng = Number(place?.geometry?.location?.lng ?? place?.geometry?.location?.lon);
+    if (!isFinite(lat) || !isFinite(lng)) {
+      console.warn('[activities] Skipping place with invalid coordinates:', place.name || place.place_id, place.geometry);
+      return false;
+    }
+    return true;
+  });
+
+  if (filteredPlaces.length === 0) {
+    console.warn('[activities] No valid place coordinates found; using demo activities');
+    filteredPlaces = getDemoActivities(userLat, userLng);
+  }
+
   // Sort places by distance
-  const placesWithDistance = places.map(place => {
-    const placeLat = place.geometry.location.lat;
-    const placeLng = place.geometry.location.lng;
+  const placesWithDistance = filteredPlaces.map(place => {
+    const placeLat = Number(place.geometry.location.lat);
+    const placeLng = Number(place.geometry.location.lng ?? place.geometry.location.lon);
     const distance = calculateDistance(userLat, userLng, placeLat, placeLng);
     return { ...place, distance };
   }).sort((a, b) => a.distance - b.distance);
@@ -453,8 +477,8 @@ function displayActivities(places, userLat, userLng, suggestions = null) {
         className: 'activity-popup'
       });
       
-      // Auto-open popup for the first 3 activities
-      if (index < 3) {
+      // Auto-open popup for the first few activities (configurable)
+      if (index < AUTO_OPEN_POPUPS) {
         setTimeout(() => {
           marker.openPopup();
         }, index * 500); // Stagger the popups
@@ -498,6 +522,10 @@ function displayActivities(places, userLat, userLng, suggestions = null) {
 
     activitiesList.appendChild(item);
   });
+
+  // Update status note
+  const status = document.getElementById('statusNote');
+  if (status) status.textContent = `Found ${placesWithDistance.length} activities nearby`;
 }
 
 // Main function to find and display activities
@@ -506,13 +534,19 @@ async function findActivities() {
   const activitiesApp = document.getElementById('activities-app');
   const findBtn = document.getElementById('findActivitiesBtn');
 
+  // Debugging: log current pointers
+  console.debug('[activities] findActivities invoked. currentUserLocation:', currentUserLocation, 'window.lastCoords:', window.lastCoords);
+
   // Get current location from map or stored location
-  if (window.lastCoords) {
+  if (window.lastCoords && (!currentUserLocation || !currentUserLocation.lat)) {
     currentUserLocation = window.lastCoords;
+    console.debug('[activities] currentUserLocation set from window.lastCoords', currentUserLocation);
   }
   
   if (!currentUserLocation) {
-    alert('Please set your location first using "Use my location" or search for a city.');
+    const msg = 'Please set your location first using "Use my location" or search for a city.';
+    console.info('[activities] ' + msg);
+    alert(msg);
     return;
   }
 
@@ -520,6 +554,10 @@ async function findActivities() {
   loadingEl.style.display = 'block';
   findBtn.disabled = true;
   findBtn.textContent = `Searching within ${DEFAULT_SEARCH_RADIUS / 1000}km...`;
+
+  // Update UI status
+  const status = document.getElementById('statusNote');
+  if (status) status.textContent = 'Finding activities near you...';
 
   try {
     const { lat, lng } = currentUserLocation;
