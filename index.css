@@ -1,5 +1,3 @@
-<<<<<<< HEAD
-=======
 :root{
   --bg:#f7f8fb;
   --panel:#ffffff;
@@ -152,5 +150,3 @@ button[disabled]{opacity:0.6;cursor:not-allowed}
   #gemini-chatbot .chatbot-window{right:12px;bottom:80px;width:92vw;height:60vh}
   #gemini-chatbot.open .chatbot-window{width:92vw;height:60vh}
 }
-
->>>>>>> c8b0dcd4051a090cf9f91e90dd1e3fa41d2663f4

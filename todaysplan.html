@@ -28,7 +28,7 @@
       window.GEMINI_API_KEY = "YOUR_GEMINI_KEY"; // optional
     </script>
   -->
-    
+
 </head>
 
 <body class="min-h-screen bg-slate-950 text-slate-900">
@@ -206,48 +206,165 @@
 
     const DEFAULT_SEARCH_RADIUS = 5000;
 
-    // Your file had a details fetch — keep it (but same CORS limitation applies in-browser)
+    // Prefer the Google Maps JavaScript PlacesService (avoids REST CORS issues)
+    // We create a small loader that resolves when the Maps JS and Places are available.
+    let _placesLoader = null;
+    let _placesService = null;
+
+    function ensurePlacesService(timeout = 8000) {
+      if (_placesService) return Promise.resolve(_placesService);
+      if (_placesLoader) return _placesLoader;
+
+      _placesLoader = new Promise((resolve, reject) => {
+        const apiKey = window.GOOGLE_MAPS_API_KEY;
+        const finishWithRest = () => {
+          // No JS API available; resolve with null (caller will fallback to REST/demo)
+          resolve(null);
+        };
+
+        // If google maps JS is already loaded and has places, create service
+        if (window.google && google.maps && google.maps.places) {
+          try {
+            const root = document.getElementById('places-service-root') || document.createElement('div');
+            root.id = 'places-service-root';
+            root.style.display = 'none';
+            document.body.appendChild(root);
+            _placesService = new google.maps.places.PlacesService(root);
+            resolve(_placesService);
+            return;
+          } catch (e) {
+            console.warn('[plan] PlacesService creation failed', e);
+            finishWithRest();
+            return;
+          }
+        }
+
+        // If no API key: can't load JS API; resolve null
+        if (!apiKey || !apiKey.trim() || apiKey === 'AIzaSyDummyKey') {
+          resolve(null);
+          return;
+        }
+
+        // Otherwise dynamically load the Maps JS with the places library
+        const cbName = '__plan_places_loaded';
+        window[cbName] = () => {
+          try {
+            const root = document.getElementById('places-service-root') || document.createElement('div');
+            root.id = 'places-service-root';
+            root.style.display = 'none';
+            document.body.appendChild(root);
+            _placesService = new google.maps.places.PlacesService(root);
+            resolve(_placesService);
+          } catch (e) {
+            console.warn('[plan] PlacesService creation after load failed', e);
+            resolve(null);
+          } finally {
+            // cleanup
+            try { delete window[cbName]; } catch (e) {}
+          }
+        };
+
+        const script = document.createElement('script');
+        script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=places&callback=${cbName}`;
+        script.async = true;
+        script.defer = true;
+        script.onerror = (e) => {
+          console.warn('[plan] Loading Google Maps JS failed', e);
+          resolve(null);
+        };
+        document.head.appendChild(script);
+
+        // safety timeout
+        setTimeout(() => {
+          if (!_placesService) resolve(null);
+        }, timeout);
+      });
+
+      return _placesLoader;
+    }
+
+    // Get place details using the JS API if available, otherwise fall back to REST (best-effort)
     async function getPlaceDetails(placeId) {
+      if (!placeId) return null;
+
+      const svc = await ensurePlacesService();
+      if (svc) {
+        return new Promise((resolve) => {
+          svc.getDetails({ placeId, fields: ['name', 'rating', 'user_ratings_total', 'reviews', 'formatted_address', 'geometry', 'place_id'] }, (res, status) => {
+            if (status === google.maps.places.PlacesServiceStatus.OK && res) {
+              resolve(res);
+            } else {
+              console.warn('[plan] Places getDetails failed', status);
+              resolve(null);
+            }
+          });
+        });
+      }
+
+      // fallback to REST (still subject to CORS):
       const apiKey = window.GOOGLE_MAPS_API_KEY;
       if (!apiKey || !apiKey.trim() || apiKey === 'AIzaSyDummyKey') return null;
 
       try {
-        const url = `https://maps.googleapis.com/maps/api/place/details/json?place_id=${placeId}&fields=name,rating,user_ratings_total,reviews,formatted_address&key=${apiKey}`;
+        const url = `https://maps.googleapis.com/maps/api/place/details/json?place_id=${placeId}&fields=name,rating,user_ratings_total,reviews,formatted_address,geometry,place_id&key=${apiKey}`;
         const response = await fetch(url);
         if (!response.ok) return null;
         const data = await response.json();
         if (data.status === 'OK' && data.result) return data.result;
         return null;
-      } catch {
+      } catch (e) {
+        console.warn('[plan] getPlaceDetails REST error', e);
         return null;
       }
     }
 
-    // Single text search call (same pattern as your activities.js)
+    // Single text search call: prefer JS PlacesService.textSearch if available
     async function textSearch(query, lat, lng, radius = DEFAULT_SEARCH_RADIUS) {
-      const apiKey = window.GOOGLE_MAPS_API_KEY;
+      const svc = await ensurePlacesService();
+      if (svc) {
+        // Wrap JS textSearch in a promise and normalize to a {status, results} shape
+        return new Promise((resolve) => {
+          const req = {
+            query,
+            location: new google.maps.LatLng(lat, lng),
+            radius
+          };
+          svc.textSearch(req, (results, status) => {
+            if (status === google.maps.places.PlacesServiceStatus.OK && results) {
+              // Map LatLng to plain lat/lng
+              const mapped = results.map(r => ({
+                ...r,
+                geometry: r.geometry && r.geometry.location ? { location: { lat: r.geometry.location.lat(), lng: r.geometry.location.lng() } } : r.geometry
+              }));
+              resolve({ status: 'OK', results: mapped });
+            } else {
+              console.warn('[plan] textSearch JS API failed', status);
+              resolve({ status: 'ERROR' });
+            }
+          });
+        });
+      }
 
+      // fallback: REST textsearch
+      const apiKey = window.GOOGLE_MAPS_API_KEY;
       if (!apiKey || !apiKey.trim() || apiKey === 'AIzaSyDummyKey') {
-        return null; // will fall back to demo in the caller
+        return null; // will fall back to demo in caller
       }
 
       const url = `https://maps.googleapis.com/maps/api/place/textsearch/json?query=${encodeURIComponent(query)}&location=${lat},${lng}&radius=${radius}&key=${apiKey}`;
 
       try {
         const response = await fetch(url);
-
-        // If CORS or key problems: fall back
         if (!response.ok) {
           const t = await response.text().catch(() => "");
           console.warn('[plan] Places request failed:', response.status, t);
-          return { status: "ERROR" };
+          return { status: 'ERROR' };
         }
-
         const data = await response.json();
         return data;
       } catch (err) {
         console.warn('[plan] Places fetch error (likely CORS):', err);
-        return { status: "ERROR" };
+        return { status: 'ERROR' };
       }
     }
 
@@ -470,6 +587,14 @@
       }
     })();
 
+    // Warm up Places service loader if a key is present (non-blocking)
+    if (window.GOOGLE_MAPS_API_KEY && window.GOOGLE_MAPS_API_KEY.trim() && window.GOOGLE_MAPS_API_KEY !== 'AIzaSyDummyKey') {
+      ensurePlacesService().then(svc => {
+        if (svc) console.info('[plan] Google Places JS loaded');
+        else console.warn('[plan] Google Maps key present but JS failed to load or was blocked');
+      });
+    }
+
     /* --------------------------------------------
        Weather (OpenWeather) — reuse of index logic
     -------------------------------------------- */
@@ -652,6 +777,16 @@
 
       const status = document.getElementById("statusNote");
 
+      // Check for JS Places support
+      const svc = await ensurePlacesService();
+      if (svc) {
+        if (status) status.textContent = 'Using Google Places JS for live place results.';
+      } else if (window.GOOGLE_MAPS_API_KEY && window.GOOGLE_MAPS_API_KEY.trim() && window.GOOGLE_MAPS_API_KEY !== 'AIzaSyDummyKey') {
+        if (status) status.textContent = 'Google Maps key detected; using REST Places (may be blocked by browser CORS).';
+      } else {
+        if (status) status.textContent = 'No Google Maps key — showing curated demo picks.';
+      }
+
       // Queries for each part
       const qCafe  = "specialty coffee cafe near me";
       const qDinner= "dinner restaurant hearty meal near me";
@@ -664,7 +799,7 @@
         textSearch(qRelax, userLat, userLng),
       ]);
 
-      // If anything errors (CORS), fall back to demo
+      // If anything errors (CORS or other), fall back to demo
       const anyBad =
         [cafeRes, dinnerRes, relaxRes].some(r => r.status !== "fulfilled" || !r.value || r.value.status === "ERROR" || r.value.status === "REQUEST_DENIED");
 
@@ -678,16 +813,33 @@
         return;
       }
 
-      // Otherwise: parse results
-      const cafePlaces   = (cafeRes.value.results || []).slice(0, 6);
-      const dinnerPlaces = (dinnerRes.value.results || []).slice(0, 6);
-      const relaxPlaces  = (relaxRes.value.results || []).slice(0, 8);
+      // Otherwise: parse results and normalize geometry
+      function normalizeResults(res) {
+        const arr = (res.results || []);
+        return arr
+          .map(p => {
+            // if geometry is LatLng (JS API), ensure plain lat/lng numbers
+            if (p.geometry && p.geometry.location && typeof p.geometry.location.lat === 'function') {
+              return { ...p, geometry: { location: { lat: p.geometry.location.lat(), lng: p.geometry.location.lng() } } };
+            }
+            // ensure lat/lng fields exist
+            if (p.geometry && p.geometry.location && (p.geometry.location.lat == null) && (p.geometry.location.lon != null)) {
+              return { ...p, geometry: { location: { lat: p.geometry.location.lat || p.geometry.location.lat, lng: p.geometry.location.lon } } };
+            }
+            return p;
+          })
+          .filter(p => p.geometry && p.geometry.location && isFinite(Number(p.geometry.location.lat)) && isFinite(Number(p.geometry.location.lng)));
+      }
+
+      const cafePlaces   = normalizeResults(cafeRes.value).slice(0, 6);
+      const dinnerPlaces = normalizeResults(dinnerRes.value).slice(0, 6);
+      const relaxPlaces  = normalizeResults(relaxRes.value).slice(0, 8);
 
       // Fetch details (reviews) best-effort
       async function enrich(list) {
         const picks = list.slice(0, 4);
         const settled = await Promise.allSettled(picks.map(async p => {
-          const details = await getPlaceDetails(p.place_id);
+          const details = await getPlaceDetails(p.place_id || p.place_id || p.placeId);
           return details ? { ...p, ...details } : p;
         }));
         return settled
