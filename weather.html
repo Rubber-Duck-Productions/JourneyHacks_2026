@@ -8,16 +8,16 @@
   <script src="https://cdn.tailwindcss.com"></script>
 
   <style>
-    .grain::before {
-      content: "";
-      position: absolute;
-      inset: 0;
-      pointer-events: none;
-      opacity: 0.18;
-      mix-blend-mode: overlay;
-      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='260' height='260'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='260' height='260' filter='url(%23n)' opacity='.55'/%3E%3C/svg%3E");
+    .grain::before{
+      content:"";
+      position:absolute;
+      inset:0;
+      pointer-events:none;
+      opacity:.18;
+      mix-blend-mode:overlay;
+      background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='260' height='260'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='260' height='260' filter='url(%23n)' opacity='.55'/%3E%3C/svg%3E");
     }
-    .caps { letter-spacing: 0.22em; }
+    .caps{letter-spacing:.22em;}
   </style>
 </head>
 
@@ -26,9 +26,11 @@
 
     <!-- Background -->
     <div class="absolute inset-0">
-      <div class="absolute -left-32 top-10 h-[520px] w-[520px] rounded-full bg-cyan-300/35 blur-[80px]"></div>
-      <div class="absolute left-40 top-24 h-[540px] w-[540px] rounded-full bg-sky-600/30 blur-[90px]"></div>
+      <!-- IDs so JS can theme them (pressure-based) -->
+      <div id="blobPrimary" class="absolute -left-32 top-10 h-[520px] w-[520px] rounded-full blur-[80px]"></div>
+      <div id="blobSecondary" class="absolute left-40 top-24 h-[540px] w-[540px] rounded-full blur-[90px]"></div>
       <div class="absolute right-[-140px] bottom-[-140px] h-[620px] w-[620px] rounded-full bg-slate-900/70 blur-[70px]"></div>
+
       <div class="absolute inset-0 bg-gradient-to-b from-black/10 via-black/25 to-black/60"></div>
       <div class="grain absolute inset-0"></div>
     </div>
@@ -36,8 +38,10 @@
     <!-- Content -->
     <div class="relative mx-auto flex min-h-screen max-w-6xl items-end justify-center px-6 py-10">
 
-      <div class="w-full max-w-[1000px] min-h-[750px] rounded-[34px] bg-white/55 backdrop-blur-xl ring-1 ring-white/35 shadow-[0_28px_80px_rgba(0,0,0,0.45)] overflow-hidden">
-
+      <!-- Card -->
+      <div id="weather-app"
+        class="w-full max-w-[1000px] min-h-[750px] rounded-[34px] bg-white/55 backdrop-blur-xl ring-1 ring-white/35 shadow-[0_28px_80px_rgba(0,0,0,0.45)] overflow-hidden"
+      >
         <div class="px-6 sm:px-8 pt-10 sm:pt-12 pb-24 sm:pb-28">
 
           <!-- Header -->
@@ -46,17 +50,31 @@
               <div class="text-[12px] font-semibold uppercase caps text-slate-800/90">
                 Today’s Vibe
               </div>
+
+              <!-- dots recolored by level -->
               <div class="flex gap-2">
-                <span class="h-3 w-3 rounded-full bg-slate-900"></span>
-                <span class="h-3 w-3 rounded-full bg-slate-800/70"></span>
-                <span class="h-3 w-3 rounded-full bg-teal-600/80"></span>
+                <span class="vibe-dot h-3 w-3 rounded-full"></span>
+                <span class="vibe-dot h-3 w-3 rounded-full"></span>
+                <span class="vibe-dot h-3 w-3 rounded-full"></span>
               </div>
             </div>
 
+            <!-- City + Date + Refresh -->
             <div class="hidden sm:flex flex-col items-end gap-1">
-              <div class="rounded-full bg-black/10 px-3 py-1 text-[11px] font-medium text-slate-800/80">
-                Vancouver
+              <div class="flex items-center gap-2">
+                <div class="rounded-full bg-black/10 px-3 py-1 text-[11px] font-medium text-slate-800/80">
+                  <span id="city">Vancouver</span>
+                </div>
+
+                <button id="refreshBtn"
+                  class="rounded-full bg-black/10 px-3 py-1 text-[11px] font-medium text-slate-800/80 hover:bg-black/15 active:bg-black/20 transition"
+                  type="button"
+                  title="Refresh weather"
+                >
+                  Refresh
+                </button>
               </div>
+
               <div class="text-[12px] uppercase tracking-[0.22em] text-slate-700/70">
                 <span id="dateValue"></span>
               </div>
@@ -73,58 +91,53 @@
             </div>
           </div>
 
+          <!-- Weather description -->
+          <div class="mt-2 text-[12px] uppercase tracking-[0.22em] text-slate-700/70">
+            <span id="desc">—</span>
+          </div>
+
           <!-- Metrics -->
           <div class="mt-8 grid grid-cols-2 lg:grid-cols-4 gap-x-8 gap-y-8">
-
-            <!-- Metric template -->
+            <!-- Pressure -->
             <div class="flex flex-col">
-              <div class="text-[12px] font-semibold uppercase caps text-slate-700/75">Precipitation</div>
+              <div class="text-[12px] font-semibold uppercase caps text-slate-700/75">Pressure</div>
               <div class="mt-2 flex items-baseline gap-2">
-                <div id="precipValue" class="text-[34px] font-extrabold">23</div>
-                <div class="text-[18px] font-bold tracking-[0.18em]">MM</div>
+                <div id="pressureValue" class="text-[34px] font-extrabold">—</div>
+                <div class="text-[18px] font-bold tracking-[0.18em]">HPA</div>
               </div>
             </div>
 
-            <div class="flex flex-col">
-              <div class="text-[12px] font-semibold uppercase caps text-slate-700/75">Visibility</div>
-              <div class="mt-2 flex items-baseline gap-2">
-                <div id="visibilityValue" class="text-[34px] font-extrabold">5</div>
-                <div class="text-[18px] font-bold tracking-[0.18em]">KM</div>
-              </div>
-            </div>
-
-            <div class="flex flex-col">
-              <div class="text-[12px] font-semibold uppercase caps text-slate-700/75">Cloud Height</div>
-              <div id="cloudHeightValue" class="mt-2 text-[34px] font-extrabold">MID</div>
-            </div>
-
+            <!-- Temperature (also supports legacy #temp) -->
             <div class="flex flex-col">
               <div class="text-[12px] font-semibold uppercase caps text-slate-700/75">Temperature</div>
               <div class="mt-2 flex items-baseline gap-2">
-                <div id="tempValue" class="text-[34px] font-extrabold">46</div>
-                <div class="text-[18px] font-bold tracking-[0.18em]">°F</div>
+                <div id="tempValue" class="text-[34px] font-extrabold">—</div>
+                <div class="text-[18px] font-bold tracking-[0.18em]">°C</div>
               </div>
+              <!-- legacy target (hidden) so your old JS can write too -->
+              <div id="temp" class="hidden"></div>
             </div>
 
+            <!-- Humidity -->
             <div class="flex flex-col">
               <div class="text-[12px] font-semibold uppercase caps text-slate-700/75">Humidity</div>
               <div class="mt-2 flex items-baseline gap-2">
-                <div id="humidityValue" class="text-[34px] font-extrabold">72</div>
+                <div id="humidityValue" class="text-[34px] font-extrabold">—</div>
                 <div class="text-[18px] font-bold tracking-[0.18em]">%</div>
               </div>
             </div>
 
+            <!-- Sunset -->
             <div class="flex flex-col">
               <div class="text-[12px] font-semibold uppercase caps text-slate-700/75">Sunset</div>
               <div class="mt-2 flex items-baseline gap-2">
-                <div id="sunsetValue" class="text-[34px] font-extrabold">5:12</div>
-                <div id="sunsetAmpm" class="text-[18px] font-bold tracking-[0.18em]">PM</div>
+                <div id="sunsetValue" class="text-[34px] font-extrabold">—</div>
+                <div id="sunsetAmpm" class="text-[18px] font-bold tracking-[0.18em]">—</div>
               </div>
             </div>
-
           </div>
 
-          <!-- Jacket Meter -->
+          <!-- Jacket Meter (driven by pressure) -->
           <div class="mt-10">
             <div class="text-[12px] font-semibold uppercase tracking-[0.22em] text-slate-700/75">
               Jacket Meter
@@ -132,12 +145,12 @@
 
             <div class="mt-4 rounded-[10px] border border-slate-900/40 bg-white/30 p-3">
               <div class="relative h-8 rounded-[8px] bg-white/10 overflow-hidden">
-                <div id="meterFill" class="absolute inset-y-0 left-0 w-[80%] bg-teal-700/70 transition-all"></div>
-                <span id="meterDot" class="absolute top-1/2 left-[80%] h-3.5 w-3.5 -translate-x-1/2 -translate-y-1/2 rounded-full bg-slate-900"></span>
+                <div id="meterFill" class="absolute inset-y-0 left-0 w-[0%] transition-all duration-500 ease-out"></div>
+                <span id="meterDot" class="absolute top-1/2 left-[0%] h-3.5 w-3.5 -translate-x-1/2 -translate-y-1/2 rounded-full bg-slate-900"></span>
               </div>
 
               <div class="mt-3 flex justify-between text-[13px] font-bold uppercase tracking-[0.22em]">
-                <span>DWR</span><span>2-Layer</span><span>Gore-Tex</span>
+                <span>Light</span><span>Mid</span><span>Storm</span>
               </div>
             </div>
           </div>
@@ -145,8 +158,9 @@
           <div class="mt-4 text-center text-[11px] tracking-wide text-slate-700/60">
             Conditions may change — check again before heading out.
           </div>
-          
 
+          <!-- Key status note (from your legacy JS) -->
+          <div id="keyNote" class="mt-3 text-center text-[10px] text-slate-700/55"></div>
         </div>
 
         <div class="h-3 bg-black/10"></div>
@@ -155,6 +169,7 @@
   </div>
 
   <script>
+    /* ---------- CLOCK (device time) ---------- */
     function updateClock() {
       const d = new Date();
       let h = d.getHours();
@@ -162,19 +177,230 @@
       const ampm = h >= 12 ? "PM" : "AM";
       h = h % 12 || 12;
 
-      timeValue.textContent = `${h}:${m}`;
-      ampmValue.textContent = ampm;
-      dateValue.textContent = d.toLocaleDateString(undefined, { weekday:"short", month:"short", day:"numeric" });
+      document.getElementById("timeValue").textContent = `${h}:${m}`;
+      document.getElementById("ampmValue").textContent = ampm;
+      document.getElementById("dateValue").textContent =
+        d.toLocaleDateString(undefined, { weekday:"short", month:"short", day:"numeric" });
+    }
+    updateClock();
+    setInterval(updateClock, 1000);
+
+    /* ---------- PRESSURE -> THEME + METER ---------- */
+    function levelFromPressure(hPa) {
+      // darker as pressure drops
+      if (hPa >= 1018) return 1;
+      if (hPa >= 1008) return 2;
+      return 3;
+    }
+
+    function meterFromPressure(hPa) {
+      if (hPa >= 1018) return 20;
+      if (hPa >= 1008) return 55;
+      return 85;
+    }
+
+    const themes = {
+      1: { b1:"bg-cyan-300/35", b2:"bg-sky-400/30", dot:"bg-teal-500/90", meter:"bg-teal-600/70" },
+      2: { b1:"bg-sky-600/40", b2:"bg-blue-700/35", dot:"bg-blue-800/90", meter:"bg-blue-800/70" },
+      3: { b1:"bg-slate-900/75", b2:"bg-black/80",   dot:"bg-slate-950",   meter:"bg-slate-900/80" }
+    };
+
+    function clearBg(el) {
+      el.className = el.className.split(" ").filter(c => !c.startsWith("bg-")).join(" ");
+    }
+
+    function applyTheme(level) {
+      const t = themes[level] || themes[1];
+
+      const blobPrimary = document.getElementById("blobPrimary");
+      const blobSecondary = document.getElementById("blobSecondary");
+      const meterFill = document.getElementById("meterFill");
+
+      clearBg(blobPrimary);
+      clearBg(blobSecondary);
+      blobPrimary.classList.add(...t.b1.split(" "));
+      blobSecondary.classList.add(...t.b2.split(" "));
+
+      document.querySelectorAll(".vibe-dot").forEach(dot => {
+        clearBg(dot);
+        dot.classList.add(...t.dot.split(" "));
+      });
+
+      clearBg(meterFill);
+      meterFill.classList.add(...t.meter.split(" "));
     }
 
     function setMeter(p) {
-      meterFill.style.width = p + "%";
-      meterDot.style.left = p + "%";
+      p = Math.max(0, Math.min(100, p));
+      document.getElementById("meterFill").style.width = p + "%";
+      document.getElementById("meterDot").style.left = p + "%";
     }
 
-    updateClock();
-    setInterval(updateClock, 1000);
-    setMeter(85);
+    function formatTo12h(dateObj) {
+      let h = dateObj.getHours();
+      const m = String(dateObj.getMinutes()).padStart(2, "0");
+      const ampm = h >= 12 ? "PM" : "AM";
+      h = h % 12 || 12;
+      return { time: `${h}:${m}`, ampm };
+    }
+
+    /* --------------------------------------------------------------------
+       index.js — legacy weather widget (restored & cleaned)
+       Integrated + mapped to this UI (pressure-based + extra fields)
+    -------------------------------------------------------------------- */
+    const CITY = "Vancouver";
+
+    const FALLBACK_KEY = "736185ae3214d80248deba0bc59a9c16";
+    const API_KEY = (window.INDEX_API_KEY && window.INDEX_API_KEY.trim())
+      ? window.INDEX_API_KEY
+      : (window.WEATHER_API_KEY && window.WEATHER_API_KEY.trim())
+        ? window.WEATHER_API_KEY
+        : FALLBACK_KEY;
+
+    // Reveal key status in console and UI
+    (function showKeyStatus() {
+      const note = document.getElementById('keyNote');
+      if (API_KEY && API_KEY !== FALLBACK_KEY) {
+        console.info('[index] Using API key provided on page (masked):', API_KEY.slice(0,4) + '...' + API_KEY.slice(-4));
+        if (note) note.textContent = 'Using API key provided on page (masked): ' + API_KEY.slice(0,4) + '...' + API_KEY.slice(-4);
+      } else if (API_KEY === FALLBACK_KEY) {
+        console.info('[index] Using fallback (embedded) API key — you can set window.INDEX_API_KEY to override.');
+        if (note) note.textContent = 'Using fallback embedded API key. For production, set a page key (window.INDEX_API_KEY).';
+      } else {
+        console.info('[index] No API key available.');
+        if (note) note.textContent = 'No API key provided — page is in demo mode.';
+      }
+    })();
+
+    async function getWeather() {
+      try {
+        const url = `https://api.openweathermap.org/data/2.5/weather?q=${encodeURIComponent(CITY)}&units=metric&appid=${API_KEY}`;
+        console.debug('[index] Fetching weather:', url);
+        const res = await fetch(url);
+
+        if (!res.ok) {
+          let body = '';
+          try { body = await res.text(); } catch (e) {}
+          console.warn('[index] Weather fetch failed', res.status, body);
+
+          const descEl = document.getElementById('desc');
+          if (res.status === 401 || res.status === 403) {
+            if (descEl) descEl.textContent = 'API key invalid or not authorized (401/403).';
+          } else if (res.status === 429) {
+            if (descEl) descEl.textContent = 'Rate limit exceeded (429).';
+          } else {
+            if (descEl) descEl.textContent = `Weather request failed (status ${res.status}).`;
+          }
+
+          document.body.classList.add('app-off');
+          return;
+        }
+
+        const data = await res.json();
+
+        const temp = Math.round(data.main.temp);
+        const humidity = Math.round(data.main.humidity);
+        const pressure = Math.round(data.main.pressure);
+
+        const desc = data.weather[0].description;
+        const weatherId = data.weather[0].id;
+
+        // Update UI
+        document.getElementById("city").textContent = data.name ?? CITY;
+
+        // legacy element (#temp) + new element (#tempValue)
+        const tempLegacy = document.getElementById("temp");
+        if (tempLegacy) tempLegacy.textContent = `${temp}°C`;
+        const tempNew = document.getElementById("tempValue");
+        if (tempNew) tempNew.textContent = `${temp}`;
+
+        document.getElementById("desc").textContent = desc;
+        document.getElementById("humidityValue").textContent = `${humidity}`;
+        document.getElementById("pressureValue").textContent = `${pressure}`;
+
+        // Sunset
+        const sunsetUnix = data.sys?.sunset;
+        if (sunsetUnix) {
+          const s = formatTo12h(new Date(sunsetUnix * 1000));
+          document.getElementById("sunsetValue").textContent = s.time;
+          document.getElementById("sunsetAmpm").textContent = s.ampm;
+        } else {
+          document.getElementById("sunsetValue").textContent = "—";
+          document.getElementById("sunsetAmpm").textContent = "—";
+        }
+
+        // Keep your legacy background (optional classes)
+        updateBackground(weatherId);
+
+        // Pressure-based theme + meter (darkens as level goes up)
+        const level = levelFromPressure(pressure);
+        applyTheme(level);
+        setMeter(meterFromPressure(pressure));
+
+        // Always display after successful fetch
+        switchOnApp();
+
+        // Advisory class only
+        if (!shouldAppBeOn(temp, desc)) {
+          document.body.classList.add('app-off');
+          console.info('[index] Advisory: app-off status set (conditions not met)');
+        } else {
+          document.body.classList.remove('app-off');
+          console.info('[index] Advisory: app-on status');
+        }
+
+      } catch (err) {
+        console.error('[index] Fetch error', err);
+        const descEl = document.getElementById("desc");
+        if (descEl) descEl.textContent = "Network error while fetching weather";
+      }
+    }
+
+    function switchOffApp() {
+      document.body.classList.add('app-off');
+      console.debug('[index] switchOffApp invoked — advisory class applied (widget kept visible)');
+    }
+
+    function switchOnApp() {
+      const el = document.getElementById("weather-app");
+      if (el) el.style.display = "block";
+      document.body.classList.remove("app-off");
+    }
+
+    function shouldAppBeOn(temp, desc) {
+      return temp >= 10 && desc.toLowerCase().includes("rain");
+    }
+
+    function updateBackground(weatherId) {
+      document.body.classList.remove('bg-heavy-rain','bg-drizzle','bg-rain','bg-snow','bg-clear');
+      if (weatherId >= 200 && weatherId < 300) {
+        document.body.classList.add('bg-heavy-rain');
+      } else if (weatherId >= 300 && weatherId < 500) {
+        document.body.classList.add('bg-drizzle');
+      } else if (weatherId >= 500 && weatherId < 531) {
+        document.body.classList.add('bg-rain');
+      } else if (weatherId >= 600 && weatherId < 700) {
+        document.body.classList.add('bg-snow');
+      } else if (weatherId === 800) {
+        document.body.classList.add('bg-clear');
+      }
+    }
+
+    window.addEventListener('DOMContentLoaded', () => {
+      // initial look so it isn't blank before fetch
+      applyTheme(1);
+      setMeter(20);
+
+      // hook up refresh
+      const refresh = document.getElementById('refreshBtn');
+      if (refresh) refresh.addEventListener('click', getWeather);
+
+      const legacy = document.getElementById('legacyRefreshBtn');
+      if (legacy) legacy.addEventListener('click', getWeather);
+
+      // run once to initialize
+      getWeather();
+    });
   </script>
 </body>
 </html>
