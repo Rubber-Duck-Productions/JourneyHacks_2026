@@ -8,9 +8,7 @@
     <!-- Tailwind CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
 
-    <!-- Optional: slight typographic polish -->
     <style>
-      /* Grain overlay (subtle) */
       .grain::before {
         content: "";
         position: absolute;
@@ -20,7 +18,6 @@
         mix-blend-mode: overlay;
         background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='260' height='260'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='260' height='260' filter='url(%23n)' opacity='.55'/%3E%3C/svg%3E");
       }
-      /* Slight letterspacing like the mock */
       .caps {
         letter-spacing: 0.22em;
       }
@@ -28,42 +25,28 @@
   </head>
 
   <body class="min-h-screen bg-slate-950 text-slate-900">
-    <!-- BACKGROUND -->
     <div class="relative min-h-screen overflow-hidden">
-      <!-- gradient blobs -->
+      <!-- Background -->
       <div class="absolute inset-0">
-        <div
-          class="absolute -left-32 top-10 h-[520px] w-[520px] rounded-full bg-cyan-300/35 blur-[80px]"
-        ></div>
-        <div
-          class="absolute left-40 top-24 h-[540px] w-[540px] rounded-full bg-sky-600/30 blur-[90px]"
-        ></div>
-        <div
-          class="absolute right-[-140px] bottom-[-140px] h-[620px] w-[620px] rounded-full bg-slate-900/70 blur-[70px]"
-        ></div>
-
-        <!-- subtle vignette -->
+        <div class="absolute -left-32 top-10 h-[520px] w-[520px] rounded-full bg-cyan-300/35 blur-[80px]"></div>
+        <div class="absolute left-40 top-24 h-[540px] w-[540px] rounded-full bg-sky-600/30 blur-[90px]"></div>
+        <div class="absolute right-[-140px] bottom-[-140px] h-[620px] w-[620px] rounded-full bg-slate-900/70 blur-[70px]"></div>
         <div class="absolute inset-0 bg-gradient-to-b from-black/10 via-black/25 to-black/60"></div>
-
-        <!-- grain -->
         <div class="grain absolute inset-0"></div>
       </div>
 
-      <!-- CONTENT -->
+      <!-- Content -->
       <div class="relative mx-auto flex min-h-screen max-w-6xl items-end justify-center px-6 py-10">
-        <!-- CARD -->
         <div
           class="w-full max-w-[1000px] min-h-[750px] rounded-[34px] bg-white/55 shadow-[0_28px_80px_rgba(0,0,0,0.45)] backdrop-blur-xl ring-1 ring-white/35 overflow-hidden"
         >
-          <!-- inner padding -->
           <div class="px-8 pt-12 pb-28">
-            <!-- header: TODAY'S VIBE + dots -->
-            <div class="flex items-center justify-between">
+            <!-- Header -->
+            <div class="flex items-start justify-between">
               <div class="flex items-center gap-4">
                 <div class="text-[12px] font-semibold uppercase caps text-slate-800/90">
                   Today's Vibe
                 </div>
-
                 <div class="flex items-center gap-2">
                   <span class="h-3 w-3 rounded-full bg-slate-900"></span>
                   <span class="h-3 w-3 rounded-full bg-slate-800/70"></span>
@@ -71,13 +54,18 @@
                 </div>
               </div>
 
-              <!-- optional tiny pill -->
-              <div class="hidden sm:block rounded-full bg-black/10 px-3 py-1 text-[11px] font-medium text-slate-800/80">
-                Vancouver
+              <!-- Location + Date -->
+              <div class="hidden sm:flex flex-col items-end gap-1">
+                <div class="rounded-full bg-black/10 px-3 py-1 text-[11px] font-medium text-slate-800/80">
+                  Vancouver
+                </div>
+                <div class="text-[12px] uppercase tracking-[0.22em] text-slate-700/70">
+                  <span id="dateValue">Jan 10, 2026</span>
+                </div>
               </div>
             </div>
 
-            <!-- Time row -->
+            <!-- Time -->
             <div class="mt-6 flex items-end gap-3">
               <div class="text-[64px] leading-none font-black tracking-tight text-slate-950">
                 <span id="timeValue">10:00</span>
@@ -87,125 +75,208 @@
               </div>
             </div>
 
-            <!-- Metrics grid -->
-            <div class="mt-8 grid grid-cols-2 gap-x-10 gap-y-7">
-              <!-- left col -->
+            <!-- Metrics (now 6 tiles: 2 cols mobile, 4 cols lg) -->
+            <div class="mt-8 grid grid-cols-2 lg:grid-cols-4 gap-x-10 gap-y-7">
+              <!-- Precip -->
               <div>
-                <div class="text-[12px] font-semibold uppercase caps text-slate-700/75">
-                  Precipitation
-                </div>
+                <div class="text-[12px] font-semibold uppercase caps text-slate-700/75">Precipitation</div>
                 <div class="mt-2 flex items-baseline gap-2">
-                  <div class="text-[34px] leading-none font-extrabold text-slate-950">23</div>
-                  <div class="text-[18px] font-bold uppercase tracking-[0.18em] text-slate-950">
-                    MM
-                  </div>
+                  <div id="precipValue" class="text-[34px] leading-none font-extrabold text-slate-950">23</div>
+                  <div class="text-[18px] font-bold uppercase tracking-[0.18em] text-slate-950">MM</div>
                 </div>
               </div>
 
+              <!-- Visibility -->
               <div class="text-right">
-                <div class="text-[12px] font-semibold uppercase caps text-slate-700/75">
-                  Visibility
-                </div>
+                <div class="text-[12px] font-semibold uppercase caps text-slate-700/75">Visibility</div>
                 <div class="mt-2 flex items-baseline justify-end gap-2">
-                  <div class="text-[34px] leading-none font-extrabold text-slate-950">5</div>
-                  <div class="text-[18px] font-bold uppercase tracking-[0.18em] text-slate-950">
-                    KM
-                  </div>
+                  <div id="visibilityValue" class="text-[34px] leading-none font-extrabold text-slate-950">5</div>
+                  <div class="text-[18px] font-bold uppercase tracking-[0.18em] text-slate-950">KM</div>
                 </div>
               </div>
 
+              <!-- Cloud Height -->
               <div>
-                <div class="text-[12px] font-semibold uppercase caps text-slate-700/75">
-                  Cloud Height
-                </div>
-                <div class="mt-2 text-[34px] leading-none font-extrabold text-slate-950">
-                  MID
+                <div class="text-[12px] font-semibold uppercase caps text-slate-700/75">Cloud Height</div>
+                <div id="cloudHeightValue" class="mt-2 text-[34px] leading-none font-extrabold text-slate-950">MID</div>
+              </div>
+
+              <!-- Temp -->
+              <div class="text-right">
+                <div class="text-[12px] font-semibold uppercase caps text-slate-700/75">Temperature</div>
+                <div class="mt-2 flex items-baseline justify-end gap-2">
+                  <div id="tempValue" class="text-[34px] leading-none font-extrabold text-slate-950">46</div>
+                  <div class="text-[18px] font-bold uppercase tracking-[0.18em] text-slate-950">°F</div>
                 </div>
               </div>
 
-              <div class="text-right">
-                <div class="text-[12px] font-semibold uppercase caps text-slate-700/75">
-                  Temperature
+              <!-- Humidity -->
+              <div>
+                <div class="text-[12px] font-semibold uppercase caps text-slate-700/75">Humidity</div>
+                <div class="mt-2 flex items-baseline gap-2">
+                  <div id="humidityValue" class="text-[34px] leading-none font-extrabold text-slate-950">72</div>
+                  <div class="text-[18px] font-bold uppercase tracking-[0.18em] text-slate-950">%</div>
                 </div>
-                <div class="mt-2 flex items-baseline justify-end gap-2">
-                  <div class="text-[34px] leading-none font-extrabold text-slate-950">46</div>
-                  <div class="text-[18px] font-bold uppercase tracking-[0.18em] text-slate-950">
-                    °F
-                  </div>
+              </div>
+
+              <!-- Sunset -->
+              <div class="text-right lg:text-left">
+                <div class="text-[12px] font-semibold uppercase caps text-slate-700/75">Sunset</div>
+                <div class="mt-2 flex items-baseline gap-2 lg:justify-start justify-end">
+                  <div id="sunsetValue" class="text-[34px] leading-none font-extrabold text-slate-950">5:12</div>
+                  <div id="sunsetAmpm" class="text-[18px] font-bold uppercase tracking-[0.18em] text-slate-950">PM</div>
                 </div>
               </div>
             </div>
 
             <!-- Jacket meter -->
             <div class="mt-10">
-              <div class="text-[12px] font-semibold uppercase caps text-slate-700/75">
+              <div class="text-[12px] font-semibold uppercase tracking-[0.22em] text-slate-700/75">
                 Jacket Meter
               </div>
 
-              <!-- meter frame -->
-              <div class="mt-4 rounded-[8px] border border-slate-900/40 bg-white/30 p-3">
-                <div class="flex items-center gap-3">
-                  <!-- segment 1 -->
-                  <div class="relative h-7 flex-1 rounded-[6px] bg-white/10 ring-1 ring-slate-900/20 overflow-hidden">
-                    <!-- fill -->
-                    <div class="absolute inset-y-0 left-0 w-[86%] rounded-[6px] bg-teal-700/70"></div>
-                    <!-- left dot -->
-                    <span class="absolute left-1 top-1/2 h-2.5 w-2.5 -translate-y-1/2 rounded-full bg-slate-900/80"></span>
-                  </div>
+              <div class="mt-4 rounded-[10px] border border-slate-900/40 bg-white/30 p-3">
+                <div class="relative h-8 w-full rounded-[8px] bg-white/10 ring-1 ring-slate-900/20 overflow-hidden">
+                  <div
+                    id="meterFill"
+                    class="absolute inset-y-0 left-0 w-[80%] rounded-[8px] bg-teal-700/70 transition-all duration-500 ease-out"
+                  ></div>
 
-                  <!-- segment 2 -->
-                  <div class="relative h-7 flex-1 rounded-[6px] bg-white/10 ring-1 ring-slate-900/20 overflow-hidden">
-                    <div class="absolute inset-y-0 left-0 w-[92%] rounded-[6px] bg-teal-700/70"></div>
-                    <!-- right dot -->
-                    <span class="absolute right-1 top-1/2 h-2.5 w-2.5 -translate-y-1/2 rounded-full bg-slate-900/80"></span>
-                  </div>
+                  <span
+                    id="meterDot"
+                    class="absolute top-1/2 left-[80%] h-3.5 w-3.5 -translate-x-1/2 -translate-y-1/2 rounded-full bg-slate-900 shadow-md transition-all duration-500 ease-out"
+                  ></span>
                 </div>
 
-                <!-- labels -->
-                <div class="mt-3 grid grid-cols-3 items-center text-center">
-                  <div class="text-[13px] font-bold uppercase tracking-[0.22em] text-slate-950">
-                    DWR
-                  </div>
-                  <div class="text-[13px] font-bold uppercase tracking-[0.22em] text-slate-950">
-                    2-Layer
-                  </div>
-                  <div class="text-[13px] font-bold uppercase tracking-[0.22em] text-slate-950">
-                    Goretex
-                  </div>
+                <div class="mt-3 flex justify-between px-1">
+                  <span class="text-[13px] font-bold uppercase tracking-[0.22em] text-slate-950">DWR</span>
+                  <span class="text-[13px] font-bold uppercase tracking-[0.22em] text-slate-950">2-Layer</span>
+                  <span class="text-[13px] font-bold uppercase tracking-[0.22em] text-slate-950">Gore-Tex</span>
                 </div>
               </div>
 
-              <!-- optional tiny helper line -->
               <div class="mt-3 text-[12px] text-slate-800/70">
-                Recommendation: <span class="font-semibold text-slate-950">Goretex</span> for 23mm precipitation.
+                Recommendation:
+                <span id="jacketRec" class="font-semibold text-slate-950">Goretex</span>
+                for <span id="precipRec" class="font-semibold text-slate-950">23</span>mm precipitation.
               </div>
             </div>
           </div>
 
-          <!-- bottom rounding accent (matches screenshot soft edge) -->
           <div class="h-3 bg-black/10"></div>
         </div>
       </div>
     </div>
+
     <script>
-        function updateTime() {
-          const now = new Date();
-          let hours = now.getHours();
-          const minutes = now.getMinutes();
-      
-          const ampm = hours >= 12 ? "PM" : "AM";
-          hours = hours % 12;
-          hours = hours ? hours : 12; // 0 -> 12
-      
-          const mm = String(minutes).padStart(2, "0");
-      
-          document.getElementById("timeValue").textContent = `${hours}:${mm}`;
-          document.getElementById("ampmValue").textContent = ampm;
-        }
-      
-        updateTime();
-        setInterval(updateTime, 1000); // update every second
-      </script>
-      
+      // ---------- Clock (device time) ----------
+      function updateClock() {
+        const now = new Date();
+
+        // time
+        let hours = now.getHours();
+        const minutes = String(now.getMinutes()).padStart(2, "0");
+        const ampm = hours >= 12 ? "PM" : "AM";
+        hours = hours % 12 || 12;
+
+        document.getElementById("timeValue").textContent = `${hours}:${minutes}`;
+        document.getElementById("ampmValue").textContent = ampm;
+
+        // date
+        document.getElementById("dateValue").textContent = now.toLocaleDateString(undefined, {
+          weekday: "short",
+          month: "short",
+          day: "numeric",
+        });
+      }
+
+      // ---------- Meter ----------
+      function setMeter(percent) {
+        percent = Math.max(0, Math.min(100, percent));
+        document.getElementById("meterFill").style.width = percent + "%";
+        document.getElementById("meterDot").style.left = percent + "%";
+      }
+
+      // ---------- Weather value setters ----------
+      function setText(id, value) {
+        const el = document.getElementById(id);
+        if (el) el.textContent = value;
+      }
+
+      function toF(c) {
+        return Math.round((c * 9) / 5 + 32);
+      }
+
+      function formatTo12h(dateObj) {
+        let h = dateObj.getHours();
+        const m = String(dateObj.getMinutes()).padStart(2, "0");
+        const ampm = h >= 12 ? "PM" : "AM";
+        h = h % 12 || 12;
+        return { time: `${h}:${m}`, ampm };
+      }
+
+      function jacketFromPrecip(mm) {
+        if (mm < 2) return { label: "DWR", meter: 20 };
+        if (mm < 10) return { label: "2-Layer", meter: 55 };
+        return { label: "Goretex", meter: 85 };
+      }
+
+      // ---------- Example "integration" hook ----------
+      // Replace the "data" object with your real API response mapping later.
+      function applyWeatherData(data) {
+        // expected shape (example):
+        // data = {
+        //   precipMm: number,
+        //   visibilityKm: number,
+        //   cloudHeight: "LOW"|"MID"|"HIGH",
+        //   tempC: number,
+        //   humidity: number,
+        //   sunset: Date or ISO string or unix seconds
+        // }
+
+        const precipMm = Math.round(data.precipMm ?? 0);
+        const visKm = Math.round(data.visibilityKm ?? 0);
+        const cloudHeight = data.cloudHeight ?? "MID";
+        const tempF = toF(data.tempC ?? 0);
+        const humidity = Math.round(data.humidity ?? 0);
+
+        // sunset: accept Date / ISO / unix seconds
+        let sunsetDate;
+        if (data.sunset instanceof Date) sunsetDate = data.sunset;
+        else if (typeof data.sunset === "number") sunsetDate = new Date(data.sunset * 1000);
+        else sunsetDate = new Date(data.sunset);
+
+        const sunset = formatTo12h(sunsetDate);
+
+        // set values
+        setText("precipValue", precipMm);
+        setText("visibilityValue", visKm);
+        setText("cloudHeightValue", cloudHeight);
+        setText("tempValue", tempF);
+        setText("humidityValue", humidity);
+        setText("sunsetValue", sunset.time);
+        setText("sunsetAmpm", sunset.ampm);
+
+        // jacket rec
+        const jacket = jacketFromPrecip(precipMm);
+        setText("jacketRec", jacket.label);
+        setText("precipRec", precipMm);
+        setMeter(jacket.meter);
+      }
+
+      // ---------- Demo data (so you see it working now) ----------
+      updateClock();
+      setInterval(updateClock, 1000);
+
+      // Demo: pretend this came from an API
+      applyWeatherData({
+        precipMm: 23,
+        visibilityKm: 5,
+        cloudHeight: "MID",
+        tempC: 8,         // -> 46°F
+        humidity: 72,     // %
+        sunset: "2026-01-10T17:12:00", // local time string
+      });
+    </script>
   </body>
 </html>
