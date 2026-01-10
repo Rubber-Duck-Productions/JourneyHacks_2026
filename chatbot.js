@@ -181,7 +181,10 @@ function generateDemoResponse(userMessage, lat, lng, weatherDesc, city) {
   }
   if (suggestions.length === 0) {
     suggestions.push(`In ${city || 'your area'}, on a ${weatherDesc}, consider visiting a museum, cafe, or indoor market close by.`);
-    suggestions.push('Want something specific? Try: 
+    suggestions.push('Want something specific? Try asking about coffee, museums, dates, or indoor activities!');
+  }
+  return suggestions.join('\n');
+}
 
 // Add a message to the chat
 function addMessage(role, content) {
