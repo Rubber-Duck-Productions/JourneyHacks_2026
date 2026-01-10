@@ -1,2 +1,28 @@
+/* default */
 body {
+  transition: background 0.6s ease;
+}
+/* light rain */
+.bg-drizzle {
+  background: linear-gradient(135deg, #cfd9df, #e2ebf0);
+}
+/* normal rain */
+.bg-rain {
+  background: linear-gradient(135deg, #6b7c93, #4b5d73);
+}
+/* heavy rain / storm */
+.bg-heavy-rain {
+  background: linear-gradient(135deg, #232526, #414345);
+}
+/* snow */
+.bg-snow {
+  background: linear-gradient(135deg, #eef2f3, #8e9eab);
+}
+/* clear */
+.bg-clear {
+  background: linear-gradient(135deg, #89f7fe, #66a6ff);
+}
+.app-off {
+  filter: grayscale(100%);
+  opacity: 0.6;
 }
