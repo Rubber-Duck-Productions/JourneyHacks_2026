@@ -40,22 +40,55 @@
         </div>
       </div>
 
+      <div id="activities-app">
+        <div class="activities-card" role="region" aria-labelledby="activities-title">
+          <div class="activities-header">
+            <h2 id="activities-title">🌧️ Rainy Day Activities</h2>
+            <div class="distance-meter">
+              <span class="distance-label">Distance:</span>
+              <span id="distance-display">--</span>
+            </div>
+          </div>
+          <div class="search-radius-info">
+            <span class="radius-badge">🔍 Search radius: 5km</span>
+          </div>
+          <button id="findActivitiesBtn" type="button" class="activity-btn">Find Activities Near Me</button>
+          <div id="activities-list" class="activities-list"></div>
+          <div id="activities-loading" class="loading" style="display:none;">Finding activities...</div>
+        </div>
+      </div>
+
       <p class="note" id="keyNote">Demo mode: no API key provided — add an OpenWeatherMap key in <code>maps.js</code> to fetch live data.</p>
       <p class="note" id="statusNote">Status: waiting</p>
       <div class="row" style="margin-top:8px">
         <button id="testKeyBtn" type="button">Test API Key</button>
       </div>
+      <p class="note" style="margin-top:12px;font-size:11px;color:#9ca3af">
+        💡 For rainy day activities: Set <code>window.GOOGLE_MAPS_API_KEY</code> and <code>window.GEMINI_API_KEY</code> in the script tag above.
+      </p>
     </aside>
   </main>
 
   <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
   <script>
-    // Optional: set your OpenWeatherMap API key here BEFORE loading `maps.js` and `index.js`.
+    // Optional: set your API keys here BEFORE loading `maps.js` and `index.js`.
     // Example (put this inline in the HTML):
-    // <script>window.WEATHER_API_KEY = 'your_openweathermap_key'; window.INDEX_API_KEY = 'your_openweathermap_key';</script>
+    // window.WEATHER_API_KEY = 'your_openweathermap_key';
+    // window.INDEX_API_KEY = 'your_openweathermap_key';
+    // window.GOOGLE_MAPS_API_KEY = 'your_google_maps_key';
+    // window.GEMINI_API_KEY = 'your_gemini_key';
     // Note: keys must be set before maps.js runs. If your key is restricted by referrer, ensure the current origin is allowed.
+    
+    // Load Google Maps API only if key is provided
+    if (window.GOOGLE_MAPS_API_KEY && window.GOOGLE_MAPS_API_KEY.trim() && window.GOOGLE_MAPS_API_KEY !== 'AIzaSyDummyKey') {
+      const script = document.createElement('script');
+      script.src = `https://maps.googleapis.com/maps/api/js?key=${window.GOOGLE_MAPS_API_KEY}&libraries=places`;
+      script.defer = true;
+      document.head.appendChild(script);
+    }
   </script>
   <script src="maps.js" defer></script>
   <script src="index.js" defer></script>
+  <script src="activities.js" defer></script>
 </body>
 </html>
