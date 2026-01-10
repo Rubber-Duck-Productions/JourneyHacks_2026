@@ -1,28 +1,55 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <title>Weather App</title>
-  <link rel="stylesheet" href="style.css" />
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>JourneyHacks — Map & Weather</title>
+  <link rel="stylesheet" href="index.css" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
 </head>
 <body>
+  <header class="site-header">
+    <div class="container">
+      <h1>JourneyHacks</h1>
+      <p class="tagline">Map + Weather (demo)</p>
+    </div>
+  </header>
 
-  <div class="weather-card">
-    <h2 id="city">Vancouver</h2>
-    <p id="temp">--°C</p>
-    <p id="desc">Loading...</p>
-    <button onclick="getWeather()">Refresh</button>
-    <button onclick="off()">Refresh</button>
-  </div>
+  <main class="app">
+    <section id="map" aria-label="Map"></section>
 
-  <script src="index.js"></script>
+    <aside class="panel" aria-label="Controls">
+      <form id="searchForm">
+        <label for="search" class="visually-hidden">Search city</label>
+        <input id="search" name="q" placeholder="Search city (e.g., Vancouver)" />
+        <div class="row">
+          <button id="searchBtn" type="submit">Search</button>
+          <button id="locateBtn" type="button">Use my location</button>
+        </div>
+      </form>
+
+      <div id="weather-app">
+        <div class="weather-card" role="region" aria-labelledby="city">
+          <h2 id="city">Vancouver</h2>
+          <p id="temp" class="temp">--°C</p>
+          <p id="desc" class="desc">Loading...</p>
+          <div class="row">
+            <button id="refreshBtn">Refresh</button>
+            <button id="legacyRefreshBtn" type="button">Legacy Refresh</button>
+          </div>
+        </div>
+      </div>
+
+      <p class="note">Demo mode: no API key provided — add an OpenWeatherMap key in <code>maps.js</code> to fetch live data.</p>
+    </aside>
+  </main>
+
+  <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+  <script>
+    // Optional: set your OpenWeatherMap API key here before loading the page, e.g.
+    // window.WEATHER_API_KEY = 'your_api_key_here';
+  </script>
+  <script src="maps.js" defer></script>
+  <script src="index.js" defer></script>
 </body>
-</html>
-<html>
-<head>
-    
-</head>
-
-
-
 </html>

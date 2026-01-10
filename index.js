@@ -1,21 +1,22 @@
+/* index.js — legacy weather widget (restored & cleaned) */
 const API_KEY = "736185ae3214d80248deba0bc59a9c16";
 const CITY = "Vancouver";
 
-
 async function getWeather() {
   try {
-    const res = await fetch(
-      `https://api.openweathermap.org/data/2.5/weather?q=${CITY}&units=metric&appid=${API_KEY}`
-    );
-
+    const res = await fetch(`https://api.openweathermap.org/data/2.5/weather?q=${encodeURIComponent(CITY)}&units=metric&appid=${API_KEY}`);
+    if (!res.ok) throw new Error('network');
     const data = await res.json();
 
     const temp = Math.round(data.main.temp);
     const desc = data.weather[0].description;
+    const weatherId = data.weather[0].id;
 
     document.getElementById("city").textContent = data.name;
     document.getElementById("temp").textContent = `${temp}°C`;
     document.getElementById("desc").textContent = desc;
+
+    updateBackground(weatherId);
 
     if (!shouldAppBeOn(temp, desc)) {
       switchOffApp();
@@ -24,15 +25,21 @@ async function getWeather() {
     }
 
   } catch (err) {
-    document.getElementById("desc").textContent = "Failed to load weather";
+    const descEl = document.getElementById("desc");
+    if (descEl) descEl.textContent = "Failed to load weather";
   }
+}
 
-  function switchOffApp() {
-  document.getElementById("weather-app").style.display = "none";
+function switchOffApp() {
+  const el = document.getElementById("weather-app");
+  if (el) el.style.display = "none";
+  document.body.classList.add("app-off");
 }
 
 function switchOnApp() {
-  document.getElementById("weather-app").style.display = "block";
+  const el = document.getElementById("weather-app");
+  if (el) el.style.display = "block";
+  document.body.classList.remove("app-off");
 }
 
 function shouldAppBeOn(temp, desc) {
@@ -40,27 +47,29 @@ function shouldAppBeOn(temp, desc) {
 }
 
 function updateBackground(weatherId) {
-  document.body.className = ""; // reset
-
+  document.body.classList.remove('bg-heavy-rain','bg-drizzle','bg-rain','bg-snow','bg-clear');
   if (weatherId >= 200 && weatherId < 300) {
-    document.body.classList.add("bg-heavy-rain");
+    document.body.classList.add('bg-heavy-rain');
   } else if (weatherId >= 300 && weatherId < 500) {
-    document.body.classList.add("bg-drizzle");
+    document.body.classList.add('bg-drizzle');
   } else if (weatherId >= 500 && weatherId < 531) {
-    document.body.classList.add("bg-rain");
+    document.body.classList.add('bg-rain');
   } else if (weatherId >= 600 && weatherId < 700) {
-    document.body.classList.add("bg-snow");
+    document.body.classList.add('bg-snow');
   } else if (weatherId === 800) {
-    document.body.classList.add("bg-clear");
+    document.body.classList.add('bg-clear');
   }
 }
 
-const weatherId = data.weather[0].id;
-updateBackground(weatherId);
+window.addEventListener('DOMContentLoaded', () => {
+  // hook up refresh button
+  const refresh = document.getElementById('refreshBtn');
+  if (refresh) refresh.addEventListener('click', getWeather);
 
-}
+  const legacy = document.getElementById('legacyRefreshBtn');
+  if (legacy) legacy.addEventListener('click', getWeather);
 
-function switchOffApp() {
-  document.body.classList.add("app-off");
-}
+  // run once to initialize
+  getWeather();
+});
 
