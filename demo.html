@@ -1,0 +1,24 @@
+async function getWeatherByCoords(lat, lon) {
+  try {
+    const res = await fetch(
+      `https://api.openweathermap.org/data/2.5/weather?lat=${lat}&lon=${lon}&units=metric&appid=${WEATHER_API_KEY}`
+    );
+
+    const data = await res.json();
+
+    const temp = Math.round(data.main.temp);
+    const desc = data.weather[0].description;
+    const city = data.name;
+    const weatherId = data.weather[0].id;
+
+    document.getElementById("city").textContent = city;
+    document.getElementById("temp").textContent = `${temp}°C`;
+    document.getElementById("desc").textContent = desc;
+
+    updateBackground(weatherId);
+
+  } catch (err) {
+    document.getElementById("desc").textContent =
+      "Failed to load weather";
+  }
+}
