@@ -1,0 +1,261 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Grey Day — Sign in</title>
+
+  <!-- Tailwind -->
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <style>
+    .grain::before{
+      content:"";
+      position:absolute;
+      inset:0;
+      pointer-events:none;
+      opacity:.18;
+      mix-blend-mode:overlay;
+      background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='260' height='260'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='260' height='260' filter='url(%23n)' opacity='.55'/%3E%3C/svg%3E");
+    }
+    .caps{letter-spacing:.22em;}
+  </style>
+</head>
+
+<body class="min-h-screen bg-slate-950 text-slate-900">
+  <div class="relative min-h-screen overflow-hidden">
+
+    <!-- Background (same styling) -->
+    <div class="absolute inset-0">
+      <div class="absolute -left-32 top-10 h-[520px] w-[520px] rounded-full bg-cyan-300/25 blur-[90px]"></div>
+      <div class="absolute left-40 top-24 h-[540px] w-[540px] rounded-full bg-sky-600/25 blur-[100px]"></div>
+      <div class="absolute right-[-140px] bottom-[-140px] h-[620px] w-[620px] rounded-full bg-slate-900/70 blur-[80px]"></div>
+      <div class="absolute inset-0 bg-gradient-to-b from-black/10 via-black/30 to-black/70"></div>
+      <div class="grain absolute inset-0"></div>
+    </div>
+
+    <!-- Content -->
+    <div class="relative mx-auto max-w-6xl px-6 py-10">
+      <!-- Top row -->
+      <div class="flex items-start justify-between gap-4">
+        <div>
+          <div class="text-[12px] font-semibold uppercase caps text-white/75">Grey Day</div>
+          <div class="mt-2 text-[40px] leading-none font-black tracking-tight text-white">
+            Sign in
+          </div>
+          <div class="mt-3 text-[11px] text-white/55 max-w-[52ch]">
+            Save favourites, sync your location vibe, and keep today’s plan on lock.
+          </div>
+        </div>
+
+        <a
+          href="index.html"
+          class="rounded-full bg-white/10 px-4 py-2 text-[12px] font-semibold text-white/80 hover:bg-white/15 active:bg-white/20 transition"
+        >
+          ← Back
+        </a>
+      </div>
+
+      <!-- Card -->
+      <div class="mt-10 grid grid-cols-1 lg:grid-cols-[1fr_420px] gap-6 items-start">
+        <!-- Left: Promo panel -->
+        <section class="rounded-[26px] bg-white/55 backdrop-blur-xl ring-1 ring-white/25 shadow-[0_20px_60px_rgba(0,0,0,0.35)] overflow-hidden">
+          <div class="px-6 pt-6 pb-4 border-b border-black/10">
+            <div class="flex items-center justify-between gap-3">
+              <div>
+                <div class="text-[11px] font-semibold uppercase caps text-slate-800/80">Today’s vibe</div>
+                <h2 class="mt-1 text-[22px] font-extrabold tracking-tight text-slate-950">A cleaner rainy-day routine.</h2>
+              </div>
+
+              <div class="flex items-center gap-2">
+                <span class="h-2.5 w-2.5 rounded-full bg-emerald-400/90"></span>
+                <span class="h-2.5 w-2.5 rounded-full bg-teal-400/90"></span>
+                <span class="h-2.5 w-2.5 rounded-full bg-cyan-400/90"></span>
+              </div>
+            </div>
+
+            <p class="mt-2 text-[12px] text-slate-700/70">
+              One login gives you synced favourites, your location-based jacket meter, and saved plans.
+            </p>
+          </div>
+
+          <div class="p-6">
+            <div class="grid grid-cols-2 gap-4">
+              <div class="rounded-[18px] bg-white/45 ring-1 ring-black/10 p-4">
+                <div class="text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-700/70">Favourites</div>
+                <div class="mt-2 text-[16px] font-extrabold tracking-tight text-slate-950">Save spots</div>
+                <div class="mt-1 text-[11px] text-slate-700/70">Cafes, meals, niche places.</div>
+              </div>
+
+              <div class="rounded-[18px] bg-white/45 ring-1 ring-black/10 p-4">
+                <div class="text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-700/70">Profile</div>
+                <div class="mt-2 text-[16px] font-extrabold tracking-tight text-slate-950">Your vibe</div>
+                <div class="mt-1 text-[11px] text-slate-700/70">City, units, defaults.</div>
+              </div>
+
+              <div class="rounded-[18px] bg-white/45 ring-1 ring-black/10 p-4">
+                <div class="text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-700/70">Security</div>
+                <div class="mt-2 text-[16px] font-extrabold tracking-tight text-slate-950">Simple</div>
+                <div class="mt-1 text-[11px] text-slate-700/70">Email + password login.</div>
+              </div>
+
+              <div class="rounded-[18px] bg-white/45 ring-1 ring-black/10 p-4">
+                <div class="text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-700/70">Sync</div>
+                <div class="mt-2 text-[16px] font-extrabold tracking-tight text-slate-950">Fast</div>
+                <div class="mt-1 text-[11px] text-slate-700/70">Works across devices.</div>
+              </div>
+            </div>
+
+            <div class="mt-6 rounded-[18px] bg-black/5 p-4 ring-1 ring-black/10">
+              <div class="text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-700/70">Note</div>
+              <div class="mt-2 text-[11px] text-slate-800/80">
+                For hackathon demo: wire this form to your auth logic later (Firebase/Supabase/custom).
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- Right: Sign in form -->
+        <section class="rounded-[26px] bg-white/55 backdrop-blur-xl ring-1 ring-white/25 shadow-[0_20px_60px_rgba(0,0,0,0.35)] overflow-hidden">
+          <div class="px-6 pt-6 pb-4 border-b border-black/10">
+            <div class="text-[11px] font-semibold uppercase caps text-slate-800/80">Account</div>
+            <h2 class="mt-1 text-[22px] font-extrabold tracking-tight text-slate-950">Welcome back</h2>
+            <p class="mt-2 text-[12px] text-slate-700/70">
+              Sign in to save your favourites and plans.
+            </p>
+          </div>
+
+          <div class="p-6">
+            <form id="signinForm" class="space-y-4">
+              <!-- Email -->
+              <div>
+                <label for="email" class="block text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-700/70">
+                  Email
+                </label>
+                <input
+                  id="email"
+                  name="email"
+                  type="email"
+                  autocomplete="email"
+                  placeholder="name@email.com"
+                  class="mt-2 w-full rounded-[16px] bg-white/60 ring-1 ring-black/10 px-4 py-3 text-[13px] text-slate-950 placeholder:text-slate-500/70 outline-none focus:ring-2 focus:ring-cyan-500/40"
+                  required
+                />
+              </div>
+
+              <!-- Password -->
+              <div>
+                <label for="password" class="block text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-700/70">
+                  Password
+                </label>
+                <div class="mt-2 relative">
+                  <input
+                    id="password"
+                    name="password"
+                    type="password"
+                    autocomplete="current-password"
+                    placeholder="••••••••"
+                    class="w-full rounded-[16px] bg-white/60 ring-1 ring-black/10 px-4 py-3 pr-12 text-[13px] text-slate-950 placeholder:text-slate-500/70 outline-none focus:ring-2 focus:ring-cyan-500/40"
+                    required
+                  />
+                  <button
+                    type="button"
+                    id="togglePw"
+                    class="absolute right-2 top-1/2 -translate-y-1/2 rounded-full bg-black/10 px-3 py-1 text-[11px] font-semibold text-slate-800/80 hover:bg-black/15 active:bg-black/20 transition"
+                    aria-label="Show password"
+                  >
+                    Show
+                  </button>
+                </div>
+              </div>
+
+              <!-- Row -->
+              <div class="flex items-center justify-between gap-3">
+                <label class="flex items-center gap-2 text-[12px] text-slate-800/80">
+                  <input
+                    type="checkbox"
+                    class="h-4 w-4 rounded border-black/20 bg-white/60 text-cyan-600 focus:ring-cyan-500/40"
+                    checked
+                  />
+                  Remember me
+                </label>
+
+                <a href="#" class="text-[12px] font-semibold text-slate-800/70 hover:text-slate-900">
+                  Forgot password?
+                </a>
+              </div>
+
+              <!-- Submit -->
+              <button
+                type="submit"
+                class="w-full rounded-full bg-black/10 px-4 py-3 text-[12px] font-semibold text-slate-900 hover:bg-black/15 active:bg-black/20 transition"
+              >
+                Sign in
+              </button>
+
+              <!-- Divider -->
+              <div class="flex items-center gap-3 py-2">
+                <div class="h-px flex-1 bg-black/10"></div>
+                <div class="text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-700/60">or</div>
+                <div class="h-px flex-1 bg-black/10"></div>
+              </div>
+
+              <!-- Social -->
+              <div class="grid grid-cols-1 gap-2">
+                <button
+                  type="button"
+                  class="rounded-full bg-white/50 ring-1 ring-black/10 px-4 py-3 text-[12px] font-semibold text-slate-900 hover:bg-white/60 transition flex items-center justify-center gap-2"
+                >
+                  <!-- simple G icon -->
+                  <span class="inline-flex h-5 w-5 items-center justify-center rounded-full bg-black/10 text-[11px] font-black">G</span>
+                  Continue with Google
+                </button>
+
+                <button
+                  type="button"
+                  class="rounded-full bg-white/50 ring-1 ring-black/10 px-4 py-3 text-[12px] font-semibold text-slate-900 hover:bg-white/60 transition flex items-center justify-center gap-2"
+                >
+                  <span class="inline-flex h-5 w-5 items-center justify-center rounded-full bg-black/10 text-[11px] font-black"></span>
+                  Continue with Apple
+                </button>
+              </div>
+
+              <p class="pt-2 text-center text-[11px] text-slate-700/70">
+                Don’t have an account?
+                <a href="#" class="font-semibold text-slate-900 hover:underline">Create one</a>
+              </p>
+            </form>
+
+            <div id="formNote" class="mt-4 text-center text-[10px] text-slate-700/60">
+              Demo UI only — wire to auth later.
+            </div>
+          </div>
+        </section>
+      </div>
+
+      <div class="mt-8 text-center text-[11px] tracking-wide text-white/45">
+        Grey Day • JourneyHacks
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Toggle password visibility (tiny UX win)
+    const toggle = document.getElementById("togglePw");
+    const pw = document.getElementById("password");
+    toggle?.addEventListener("click", () => {
+      const isHidden = pw.type === "password";
+      pw.type = isHidden ? "text" : "password";
+      toggle.textContent = isHidden ? "Hide" : "Show";
+      toggle.setAttribute("aria-label", isHidden ? "Hide password" : "Show password");
+    });
+
+    // Demo submit
+    document.getElementById("signinForm")?.addEventListener("submit", (e) => {
+      e.preventDefault();
+      const note = document.getElementById("formNote");
+      if (note) note.textContent = "Signed in (demo). Connect this to your auth backend.";
+    });
+  </script>
+</body>
+</html>
