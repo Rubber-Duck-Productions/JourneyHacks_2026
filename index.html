@@ -26,7 +26,7 @@
 <body class="min-h-screen bg-slate-950 text-slate-900">
   <div class="relative min-h-screen overflow-hidden">
 
-    <!-- Background (same as Today’s Plan) -->
+    <!-- Background -->
     <div class="absolute inset-0">
       <div class="absolute -left-32 top-10 h-[520px] w-[520px] rounded-full bg-cyan-300/25 blur-[90px]"></div>
       <div class="absolute left-40 top-24 h-[540px] w-[540px] rounded-full bg-sky-600/25 blur-[100px]"></div>
@@ -38,62 +38,89 @@
     <!-- Content -->
     <div class="relative mx-auto max-w-6xl px-6 py-8">
 
-      <!-- Top bar (3 buttons left, logo center, search right, profile far right) -->
-      <nav class="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+      <!-- Top bar -->
+      <!-- Top bar -->
+<nav class="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
 
-        <!-- Left buttons -->
-        <div class="flex flex-wrap items-center gap-2">
-          <button id="favouritesBtn"
-            class="rounded-full bg-white/10 px-4 py-2 text-[12px] font-semibold text-white/80 hover:bg-white/15 active:bg-white/20 transition">
-            Favourites
-          </button>
-          <button id="todaysPlanBtn"
-            class="rounded-full bg-white/10 px-4 py-2 text-[12px] font-semibold text-white/80 hover:bg-white/15 active:bg-white/20 transition">
-            Today's Plan
-          </button>
-          <button id="weatherBtn"
-            class="rounded-full bg-white/10 px-4 py-2 text-[12px] font-semibold text-white/80 hover:bg-white/15 active:bg-white/20 transition">
-            Weather
-          </button>
-        </div>
+  <!-- Left nav links (hidden on mobile) -->
+  <div id="navLinks" class="hidden md:flex flex-wrap items-center gap-2">
+    <a id="favouritesBtn" href="favourites.html"
+      class="rounded-full bg-white/10 px-4 py-2 text-[12px] font-semibold text-white/80 hover:bg-white/15 active:bg-white/20 transition">
+      Favourites
+    </a>
 
-        <!-- Center logo -->
-        <div class="flex items-center justify-center">
-          <div class="text-[12px] font-semibold uppercase caps text-white/75 hidden md:block">Grey Day</div>
-          <div class="md:hidden text-[14px] font-extrabold tracking-tight text-white">Grey Day</div>
-        </div>
+    <a id="todaysPlanBtn" href="todaysplan.html"
+      class="rounded-full bg-white/10 px-4 py-2 text-[12px] font-semibold text-white/80 hover:bg-white/15 active:bg-white/20 transition">
+      Today's Plan
+    </a>
 
-        <!-- Right search + profile -->
-        <div class="flex items-center gap-2 justify-end">
-          <form id="searchForm" class="w-full md:w-[420px]" role="search">
-            <label for="search" class="sr-only">Search city</label>
-            <input
-              id="search"
-              name="q"
-              placeholder="Search city (e.g., Vancouver)"
-              class="w-full rounded-full bg-white/55 backdrop-blur-xl ring-1 ring-white/25 px-4 py-2.5 text-[12px] text-slate-950 placeholder:text-slate-600/70 outline-none focus:ring-2 focus:ring-cyan-500/40"
-            />
-          </form>
+    <a id="weatherBtn" href="weather.html"
+      class="rounded-full bg-white/10 px-4 py-2 text-[12px] font-semibold text-white/80 hover:bg-white/15 active:bg-white/20 transition">
+      Weather
+    </a>
+  </div>
 
-          <button id="profileBtn" aria-label="Profile"
-            class="shrink-0 rounded-full bg-white/10 p-2.5 text-white/80 hover:bg-white/15 active:bg-white/20 transition">
-            <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path d="M12 12C14.7614 12 17 9.76142 17 7C17 4.23858 14.7614 2 12 2C9.23858 2 7 4.23858 7 7C7 9.76142 9.23858 12 12 12Z"
-                stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-              <path d="M20.59 22C20.59 18.13 16.74 15 12 15C7.26 15 3.41 18.13 3.41 22"
-                stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-            </svg>
-          </button>
+  <!-- Center logo (bigger) -->
+  <div class="flex items-center justify-center">
+    <div class="text-[18px] font-black uppercase caps text-white/85">
+      Grey Day
+    </div>
+  </div>
 
-          <!-- Optional: keep your mobile menu id hooks (no dropdown UI here to keep clean) -->
-          <button id="mobileMenuBtn" aria-label="Menu" aria-expanded="false"
-            class="md:hidden rounded-full bg-white/10 px-4 py-2 text-[12px] font-semibold text-white/80 hover:bg-white/15 active:bg-white/20 transition">
-            Menu
-          </button>
-        </div>
-      </nav>
+  <!-- Right search + profile + menu -->
+  <div class="relative flex items-center gap-2 justify-end">
 
-      <!-- Header line (small) -->
+    <form id="searchForm" class="w-full md:w-[420px]" role="search">
+      <label for="search" class="sr-only">Search city</label>
+      <input
+        id="search"
+        name="q"
+        placeholder="Search city (e.g., Vancouver)"
+        class="w-full rounded-full bg-white/55 backdrop-blur-xl ring-1 ring-white/25 px-4 py-2.5 text-[12px] text-slate-950 placeholder:text-slate-600/70 outline-none focus:ring-2 focus:ring-cyan-500/40"
+      />
+    </form>
+
+    <a href="profile.html" id="profileBtn" aria-label="Profile"
+      class="shrink-0 rounded-full bg-white/10 p-2.5 text-white/80 hover:bg-white/15 active:bg-white/20 transition inline-flex items-center justify-center">
+      <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M12 12C14.7614 12 17 9.76142 17 7C17 4.23858 14.7614 2 12 2C9.23858 2 7 4.23858 7 7C7 9.76142 9.23858 12 12 12Z"
+          stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        <path d="M20.59 22C20.59 18.13 16.74 15 12 15C7.26 15 3.41 18.13 3.41 22"
+          stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+    </a>
+
+    <!-- Menu button only on mobile -->
+    <button id="mobileMenuBtn" type="button" aria-label="Menu" aria-expanded="false"
+      class="md:hidden rounded-full bg-white/10 px-4 py-2 text-[12px] font-semibold text-white/80 hover:bg-white/15 active:bg-white/20 transition">
+      Menu
+    </button>
+
+    <!-- Mobile dropdown -->
+    <div id="mobileDropdown"
+      class="md:hidden hidden absolute right-0 top-[52px] w-56 rounded-[18px] bg-white/55 backdrop-blur-xl ring-1 ring-white/25 shadow-[0_20px_60px_rgba(0,0,0,0.35)] overflow-hidden">
+      <a href="favourites.html"
+        class="block px-4 py-3 text-[12px] font-semibold text-slate-900 hover:bg-black/10 transition">
+        Favourites
+      </a>
+      <a href="todaysplan.html"
+        class="block px-4 py-3 text-[12px] font-semibold text-slate-900 hover:bg-black/10 transition">
+        Today's Plan
+      </a>
+      <a href="weather.html"
+        class="block px-4 py-3 text-[12px] font-semibold text-slate-900 hover:bg-black/10 transition">
+        Weather
+      </a>
+      <a href="profile.html"
+        class="block px-4 py-3 text-[12px] font-semibold text-slate-900 hover:bg-black/10 transition border-t border-black/10">
+        Profile
+      </a>
+    </div>
+  </div>
+</nav>
+
+
+      <!-- Header line -->
       <div class="mt-6 flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
         <div>
           <div class="text-[12px] font-semibold uppercase caps text-white/75">Map + Weather</div>
@@ -105,7 +132,6 @@
           </div>
         </div>
 
-        <!-- Quick actions (connects to your existing ids) -->
         <div class="flex flex-wrap items-center gap-2">
           <button id="searchBtn" type="submit" form="searchForm"
             class="rounded-full bg-white/10 px-4 py-2 text-[12px] font-semibold text-white/80 hover:bg-white/15 active:bg-white/20 transition">
@@ -118,10 +144,10 @@
         </div>
       </div>
 
-      <!-- Main grid: Map + Panel -->
+      <!-- Main grid -->
       <div class="mt-8 grid grid-cols-1 lg:grid-cols-[1fr_420px] gap-6 items-stretch">
 
-        <!-- MAP CARD -->
+        <!-- Map card -->
         <section class="rounded-[26px] bg-white/55 backdrop-blur-xl ring-1 ring-white/25 shadow-[0_20px_60px_rgba(0,0,0,0.35)] overflow-hidden">
           <div class="px-6 pt-6 pb-4 border-b border-black/10">
             <div class="flex items-center justify-between gap-3">
@@ -129,17 +155,13 @@
                 <div class="text-[11px] font-semibold uppercase caps text-slate-800/80">Map</div>
                 <h2 class="mt-1 text-[20px] font-extrabold tracking-tight text-slate-950">Your area</h2>
               </div>
-              <div class="text-[10px] text-slate-700/60">
-                Tip: click the map to explore
-              </div>
+              <div class="text-[10px] text-slate-700/60">Tip: click the map to explore</div>
             </div>
           </div>
-
-          <!-- Leaflet map container (keep ID!) -->
           <div id="map" class="h-[58vh] lg:h-[78vh] w-full"></div>
         </section>
 
-        <!-- PANEL CARD -->
+        <!-- Panel card -->
         <aside class="rounded-[26px] bg-white/55 backdrop-blur-xl ring-1 ring-white/25 shadow-[0_20px_60px_rgba(0,0,0,0.35)] overflow-hidden">
           <div class="px-6 pt-6 pb-4 border-b border-black/10">
             <div class="flex items-start justify-between gap-3">
@@ -153,13 +175,10 @@
                 Refresh
               </button>
             </div>
-            <p id="statusNote" class="mt-2 text-[11px] text-slate-700/70">
-              Status: waiting
-            </p>
+            <p id="statusNote" class="mt-2 text-[11px] text-slate-700/70">Status: waiting</p>
           </div>
 
           <div class="p-6 space-y-5">
-            <!-- Weather block (keep IDs!) -->
             <div id="weather-app" class="rounded-[18px] bg-white/45 ring-1 ring-black/10 p-4">
               <div class="flex items-start justify-between gap-3">
                 <div>
@@ -167,7 +186,6 @@
                   <div id="city" class="mt-1 text-[18px] font-extrabold tracking-tight text-slate-950">Vancouver</div>
                   <div id="desc" class="mt-1 text-[12px] text-slate-700/70">Loading...</div>
                 </div>
-
                 <div class="text-right">
                   <div class="text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-700/70">Temp</div>
                   <div id="temp" class="mt-1 text-[30px] font-black tracking-tight text-slate-950">--°C</div>
@@ -187,7 +205,6 @@
               </div>
             </div>
 
-            <!-- Activities block (keep IDs!) -->
             <div id="activities-app" class="rounded-[18px] bg-white/45 ring-1 ring-black/10 p-4">
               <div class="flex items-start justify-between gap-3">
                 <div>
@@ -196,7 +213,6 @@
                     🌧️ Activities near you
                   </div>
                 </div>
-
                 <div class="text-right">
                   <div class="text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-700/70">Distance</div>
                   <div class="mt-1 text-[12px] font-semibold text-slate-900/70">
@@ -223,14 +239,8 @@
               <div id="activities-list" class="mt-4 space-y-3"></div>
             </div>
 
-            <!-- Notes -->
             <p id="keyNote" class="text-[10px] text-slate-700/60">
               Demo mode: no API key provided — add an OpenWeatherMap key in maps.js to fetch live data.
-            </p>
-
-            <p class="text-[10px] text-slate-700/55">
-              💡 For rainy day activities: Set <code class="rounded bg-black/10 px-1.5 py-0.5">window.GOOGLE_MAPS_API_KEY</code> and
-              <code class="rounded bg-black/10 px-1.5 py-0.5">window.GEMINI_API_KEY</code>.
             </p>
           </div>
         </aside>
@@ -242,15 +252,90 @@
     </div>
   </div>
 
-  <!-- Scripts (unchanged) -->
+  <!-- Scripts -->
+   <script>
+  document.addEventListener("DOMContentLoaded", () => {
+    const locateBtn = document.getElementById("locateBtn");
+    const statusEl = document.getElementById("statusNote");
+
+    if (!locateBtn) return;
+
+    locateBtn.addEventListener("click", () => {
+      if (!navigator.geolocation) {
+        if (statusEl) statusEl.textContent = "Geolocation not supported in this browser.";
+        return;
+      }
+
+      // Geolocation requires HTTPS or localhost
+      if (location.protocol !== "https:" && location.hostname !== "localhost" && location.hostname !== "127.0.0.1") {
+        if (statusEl) statusEl.textContent = "Geolocation blocked (use HTTPS or localhost).";
+        return;
+      }
+
+      if (statusEl) statusEl.textContent = "Getting your location…";
+
+      navigator.geolocation.getCurrentPosition(
+        (pos) => {
+          const { latitude, longitude } = pos.coords;
+          if (statusEl) statusEl.textContent = `Location set: ${latitude.toFixed(4)}, ${longitude.toFixed(4)}`;
+
+          // If your existing code exposes a function, call it:
+          if (typeof window.setUserLocation === "function") {
+            window.setUserLocation(latitude, longitude);
+          }
+
+          // Also fire a custom event your scripts can listen to
+          window.dispatchEvent(new CustomEvent("user-location", {
+            detail: { lat: latitude, lng: longitude }
+          }));
+        },
+        (err) => {
+          console.warn("Geolocation error:", err);
+          if (statusEl) statusEl.textContent = "Couldn’t get your location (permission denied / timeout).";
+        },
+        { enableHighAccuracy: true, timeout: 8000 }
+      );
+    });
+  });
+</script>
+
+  <script>
+    // Mobile dropdown behavior
+    document.addEventListener("DOMContentLoaded", () => {
+      const menuBtn = document.getElementById("mobileMenuBtn");
+      const dropdown = document.getElementById("mobileDropdown");
+  
+      if (menuBtn && dropdown) {
+        menuBtn.addEventListener("click", (e) => {
+          e.stopPropagation();
+          const open = dropdown.classList.toggle("hidden") === false;
+          menuBtn.setAttribute("aria-expanded", open ? "true" : "false");
+        });
+  
+        // Close when tapping outside
+        document.addEventListener("click", (e) => {
+          if (!dropdown.classList.contains("hidden")) {
+            const clickedInside = dropdown.contains(e.target) || menuBtn.contains(e.target);
+            if (!clickedInside) {
+              dropdown.classList.add("hidden");
+              menuBtn.setAttribute("aria-expanded", "false");
+            }
+          }
+        });
+  
+        // Close after clicking a link
+        dropdown.querySelectorAll("a").forEach(a => {
+          a.addEventListener("click", () => {
+            dropdown.classList.add("hidden");
+            menuBtn.setAttribute("aria-expanded", "false");
+          });
+        });
+      }
+    });
+  </script>
+  
   <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
   <script>
-    // Optional: set your API keys here BEFORE loading `maps.js` and `index.js`.
-    // Example (put this inline in the HTML):
-    // <script>window.WEATHER_API_KEY = 'your_openweathermap_key'; window.INDEX_API_KEY = 'your_openweathermap_key'; window.GOOGLE_MAPS_API_KEY = 'your_google_maps_key'; window.GEMINI_API_KEY = 'your_gemini_key';</script>
-    // Note: keys must be set before maps.js runs. If your key is restricted by referrer, ensure the current origin is allowed.
-    
-    // Load Google Maps API only if key is provided
     if (window.GOOGLE_MAPS_API_KEY && window.GOOGLE_MAPS_API_KEY.trim() && window.GOOGLE_MAPS_API_KEY !== 'AIzaSyDummyKey') {
       const script = document.createElement('script');
       script.src = `https://maps.googleapis.com/maps/api/js?key=${window.GOOGLE_MAPS_API_KEY}&libraries=places`;
@@ -261,6 +346,6 @@
   <script src="maps.js" defer></script>
   <script src="index.js" defer></script>
   <script src="activities.js" defer></script>
-  <script src="chatbot.js" defer></script> 
+  <script src="chatbot.js" defer></script>
 </body>
 </html>
