@@ -1,6 +1,10 @@
 /* activities.js — Rainy Day Activities using Google Maps Places API and Gemini */
 // Note: do NOT hard-code API keys in source files. Set keys on the page as:
-// <script>window.GOOGLE_MAPS_API_KEY = 'YOUR_KEY'; window.GEMINI_API_KEY = 'YOUR_KEY';</script>
+GOOGLE_MAPS_API_KEY = "AIzaSyBLxPuSPPd9VsFhC6LOJdk_5dGwAQVIBAE";
+GEMINI_API_KEY = "AIzaSyDJ5lYgcPICspOJIQxUeU7U7-RBbwmIlLk";
+
+
+
 let activitiesMarkers = [];
 let currentUserLocation = null;
 

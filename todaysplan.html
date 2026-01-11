@@ -84,6 +84,27 @@
             >
               Test API Key
             </button>
+
+            <button id="apiKeyToggle"
+              class="rounded-full bg-white/10 px-3 py-1 text-[12px] font-semibold text-white/80 hover:bg-white/15 active:bg-white/20 transition"
+              type="button"
+            >
+              Manage Keys
+            </button>
+          </div>
+
+          <div id="apiKeyPanel" class="mt-3 px-3 py-3 rounded-lg bg-white/5 hidden">
+            <div class="flex flex-col gap-2">
+              <input id="apiGoogleInput" placeholder="Google Maps API key (session)" class="rounded-md p-2 bg-white/10" />
+              <input id="apiWeatherInput" placeholder="OpenWeather API key" class="rounded-md p-2 bg-white/10" />
+              <input id="apiGeminiInput" placeholder="Gemini API key (optional)" class="rounded-md p-2 bg-white/10" />
+              <div class="flex gap-2">
+                <button id="saveApiKeysBtn" class="rounded-full bg-white/10 px-3 py-1">Save & Apply</button>
+                <button id="clearApiKeysBtn" class="rounded-full bg-rose-600 px-3 py-1">Clear</button>
+                <button id="applyApiKeysBtn" class="rounded-full bg-white/10 px-3 py-1">Apply (no reload)</button>
+              </div>
+              <div id="apiKeyStatus" class="text-[11px] text-white/50"></div>
+            </div>
           </div>
 
           <div id="statusNote" class="text-[10px] text-white/45 sm:text-right max-w-[320px]">
@@ -978,6 +999,88 @@
 
       const testBtn = document.getElementById('testKeyBtn');
       if (testBtn) testBtn.addEventListener('click', testAPIKey);
+
+      // API key panel behavior
+      const toggle = document.getElementById('apiKeyToggle');
+      const panel = document.getElementById('apiKeyPanel');
+      const saveBtn = document.getElementById('saveApiKeysBtn');
+      const clearBtn = document.getElementById('clearApiKeysBtn');
+      const applyBtn = document.getElementById('applyApiKeysBtn');
+
+      function loadSessionKeysIntoInputs() {
+        try {
+          document.getElementById('apiGoogleInput').value = sessionStorage.getItem('GOOGLE_MAPS_API_KEY') || '';
+          document.getElementById('apiWeatherInput').value = sessionStorage.getItem('WEATHER_API_KEY') || '';
+          document.getElementById('apiGeminiInput').value = sessionStorage.getItem('GEMINI_API_KEY') || '';
+        } catch (e) {}
+      }
+
+      if (toggle && panel) {
+        toggle.addEventListener('click', () => {
+          panel.classList.toggle('hidden');
+          if (!panel.classList.contains('hidden')) loadSessionKeysIntoInputs();
+        });
+      }
+
+      if (saveBtn) {
+        saveBtn.addEventListener('click', () => {
+          const g = document.getElementById('apiGoogleInput').value.trim();
+          const w = document.getElementById('apiWeatherInput').value.trim();
+          const gm = document.getElementById('apiGeminiInput').value.trim();
+          try {
+            if (g) sessionStorage.setItem('GOOGLE_MAPS_API_KEY', g); else sessionStorage.removeItem('GOOGLE_MAPS_API_KEY');
+            if (w) sessionStorage.setItem('WEATHER_API_KEY', w); else sessionStorage.removeItem('WEATHER_API_KEY');
+            if (gm) sessionStorage.setItem('GEMINI_API_KEY', gm); else sessionStorage.removeItem('GEMINI_API_KEY');
+
+            // apply immediately
+            window.GOOGLE_MAPS_API_KEY = g || undefined;
+            window.WEATHER_API_KEY = w || undefined;
+            window.GEMINI_API_KEY = gm || undefined;
+
+            document.getElementById('apiKeyStatus').textContent = 'Keys saved to session and applied';
+          } catch (e) {
+            console.warn('[plan] Failed to save keys', e);
+            document.getElementById('apiKeyStatus').textContent = 'Failed to save keys (see console)';
+          }
+        });
+      }
+
+      if (applyBtn) {
+        applyBtn.addEventListener('click', async () => {
+          const g = document.getElementById('apiGoogleInput').value.trim();
+          const w = document.getElementById('apiWeatherInput').value.trim();
+          const gm = document.getElementById('apiGeminiInput').value.trim();
+          window.GOOGLE_MAPS_API_KEY = g || undefined;
+          window.WEATHER_API_KEY = w || undefined;
+          window.GEMINI_API_KEY = gm || undefined;
+          try {
+            if (g) {
+              const svc = await ensurePlacesService();
+              document.getElementById('apiKeyStatus').textContent = svc ? 'Google Places JS loaded' : 'Google key applied but JS failed to load';
+            }
+            if (w) {
+              // test weather key quickly
+              await testAPIKey();
+            }
+          } catch (e) {
+            console.warn('[plan] Apply keys error', e);
+            document.getElementById('apiKeyStatus').textContent = 'Applied but encountered an error (see console)';
+          }
+        });
+      }
+
+      if (clearBtn) {
+        clearBtn.addEventListener('click', () => {
+          sessionStorage.removeItem('GOOGLE_MAPS_API_KEY');
+          sessionStorage.removeItem('WEATHER_API_KEY');
+          sessionStorage.removeItem('GEMINI_API_KEY');
+          window.GOOGLE_MAPS_API_KEY = undefined;
+          window.WEATHER_API_KEY = undefined;
+          window.GEMINI_API_KEY = undefined;
+          document.getElementById('apiKeyStatus').textContent = 'Keys cleared from session';
+          loadSessionKeysIntoInputs();
+        });
+      }
 
       // default load (Vancouver fallback)
       currentUserLocation = { lat: 49.2827, lng: -123.1207 };
