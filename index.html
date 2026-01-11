@@ -20,34 +20,164 @@
       background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='260' height='260'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='260' height='260' filter='url(%23n)' opacity='.55'/%3E%3C/svg%3E");
     }
     .caps{letter-spacing:.22em;}
+
+    /* ✅ FIX: lock heights on desktop so the map never resizes;
+       make right panel scroll internally instead of growing */
+    @media (min-width: 1024px){
+      #map { height: 680px !important; }
+      #rightPanel { height: 680px !important; }
+    }
+    @media (max-width: 1023px){
+      #map { height: 520px !important; }
+      #rightPanel { height: auto !important; }
+    }
+
+    /* --- Floating Chatbot (minimal styling) --- */
+    #gemini-chatbot{
+      position: fixed;
+      right: 18px;
+      bottom: 18px;
+      z-index: 999999;
+      font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial;
+    }
+    .chatbot-toggle{
+      width: 56px;
+      height: 56px;
+      border-radius: 999px;
+      display: grid;
+      place-items: center;
+      background: rgba(255,255,255,.12);
+      color: rgba(255,255,255,.9);
+      backdrop-filter: blur(14px);
+      border: 1px solid rgba(255,255,255,.22);
+      box-shadow: 0 18px 50px rgba(0,0,0,.45);
+      cursor: pointer;
+      transition: transform .15s ease, background .15s ease;
+    }
+    .chatbot-toggle:hover{ background: rgba(255,255,255,.16); }
+    .chatbot-toggle:active{ transform: scale(.98); }
+
+    .chatbot-window{
+      width: min(92vw, 380px);
+      height: 520px;
+      margin-bottom: 12px;
+      border-radius: 22px;
+      overflow: hidden;
+      background: rgba(255,255,255,.60);
+      border: 1px solid rgba(255,255,255,.28);
+      backdrop-filter: blur(18px);
+      box-shadow: 0 28px 80px rgba(0,0,0,.50);
+      display: none;
+    }
+    #gemini-chatbot.open .chatbot-window{ display: flex; flex-direction: column; }
+
+    .chatbot-header{
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      padding: 14px 14px;
+      border-bottom: 1px solid rgba(0,0,0,.10);
+    }
+    .chatbot-header-content{ display: flex; gap: 10px; align-items: center; }
+    .chatbot-header h3{ font-weight: 800; font-size: 14px; line-height: 1.1; color: rgba(2,6,23,.92); }
+    .chatbot-subtitle{ font-size: 11px; color: rgba(2,6,23,.55); margin-top: 2px; }
+    .chatbot-close{
+      width: 34px; height: 34px; border-radius: 999px;
+      background: rgba(0,0,0,.08);
+      color: rgba(2,6,23,.72);
+      font-size: 18px;
+      cursor: pointer;
+    }
+    .chatbot-close:hover{ background: rgba(0,0,0,.12); }
+
+    .chatbot-messages{
+      flex: 1;
+      overflow: auto;
+      padding: 14px;
+    }
+    .chatbot-message{ margin-bottom: 10px; }
+    .chatbot-message .message-content{
+      font-size: 12px;
+      line-height: 1.35;
+      padding: 10px 12px;
+      border-radius: 16px;
+      border: 1px solid rgba(0,0,0,.08);
+    }
+    .chatbot-user .message-content{
+      background: rgba(2,6,23,.10);
+      color: rgba(2,6,23,.85);
+      margin-left: 36px;
+    }
+    .chatbot-assistant .message-content{
+      background: rgba(255,255,255,.70);
+      color: rgba(2,6,23,.85);
+      margin-right: 36px;
+    }
+
+    .chatbot-input-container{
+      display: flex;
+      gap: 10px;
+      padding: 12px;
+      border-top: 1px solid rgba(0,0,0,.10);
+      background: rgba(255,255,255,.45);
+    }
+    .chatbot-input{
+      flex: 1;
+      border-radius: 999px;
+      padding: 10px 12px;
+      font-size: 12px;
+      outline: none;
+      border: 1px solid rgba(0,0,0,.10);
+      background: rgba(255,255,255,.70);
+    }
+    .chatbot-send{
+      width: 42px; height: 42px;
+      border-radius: 999px;
+      display: grid; place-items: center;
+      background: rgba(0,0,0,.10);
+      color: rgba(2,6,23,.8);
+      cursor: pointer;
+    }
+    .chatbot-send:hover{ background: rgba(0,0,0,.14); }
+
+    .typing-indicator{ display:flex; gap:6px; align-items:center; }
+    .typing-indicator span{
+      width: 6px; height: 6px; border-radius: 999px;
+      background: rgba(2,6,23,.45);
+      animation: bounce 1s infinite ease-in-out;
+    }
+    .typing-indicator span:nth-child(2){ animation-delay: .12s; }
+    .typing-indicator span:nth-child(3){ animation-delay: .24s; }
+    @keyframes bounce{ 0%,100%{ transform: translateY(0); opacity:.5; } 50%{ transform: translateY(-4px); opacity:1; } }
   </style>
 </head>
-<div id="gemini-chatbot">
-  <div class="chatbot-window">
-    <div class="chatbot-header">
-      <div class="chatbot-header-content">
-        <h3>Grey Day Assistant</h3>
-        <div class="chatbot-subtitle">Weather & plans</div>
-      </div>
-      <button class="chatbot-close">×</button>
-    </div>
-
-    <div class="chatbot-messages" id="chatMessages"></div>
-
-    <div class="chatbot-input-container">
-      <input
-        id="chatInput"
-        class="chatbot-input"
-        placeholder="Ask about the weather or plans…"
-      />
-      <button id="chatSend" class="chatbot-send">➤</button>
-    </div>
-  </div>
-
-  <button class="chatbot-toggle">💬</button>
-</div>
 
 <body class="min-h-screen bg-slate-950 text-slate-900">
+  <!-- ✅ Chatbot inside body -->
+  <div id="gemini-chatbot">
+    <div class="chatbot-window">
+      <div class="chatbot-header">
+        <div class="chatbot-header-content">
+          <div>
+            <h3>Grey Day Assistant</h3>
+            <div class="chatbot-subtitle">Weather & plans</div>
+          </div>
+        </div>
+        <button class="chatbot-close" type="button" aria-label="Close chat">×</button>
+      </div>
+
+      <div class="chatbot-messages" id="chatMessages"></div>
+
+      <div class="chatbot-input-container">
+        <input id="chatInput" class="chatbot-input" placeholder="Ask about the weather or plans…" />
+        <button id="chatSend" class="chatbot-send" type="button">➤</button>
+      </div>
+    </div>
+
+    <button class="chatbot-toggle" type="button" aria-label="Open chat">💬</button>
+  </div>
+
   <div class="relative min-h-screen overflow-hidden">
 
     <!-- Background -->
@@ -63,86 +193,63 @@
     <div class="relative mx-auto max-w-6xl px-6 py-8">
 
       <!-- Top bar -->
-      <!-- Top bar -->
-<nav class="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+      <nav class="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+        <div id="navLinks" class="hidden md:flex flex-wrap items-center gap-2">
+          <a id="favouritesBtn" href="favourites.html"
+            class="rounded-full bg-white/10 px-4 py-2 text-[12px] font-semibold text-white/80 hover:bg-white/15 active:bg-white/20 transition">
+            Favourites
+          </a>
+          <a id="todaysPlanBtn" href="todaysplan.html"
+            class="rounded-full bg-white/10 px-4 py-2 text-[12px] font-semibold text-white/80 hover:bg-white/15 active:bg-white/20 transition">
+            Today's Plan
+          </a>
+          <a id="weatherBtn" href="weather.html"
+            class="rounded-full bg-white/10 px-4 py-2 text-[12px] font-semibold text-white/80 hover:bg-white/15 active:bg-white/20 transition">
+            Weather
+          </a>
+        </div>
 
-  <!-- Left nav links (hidden on mobile) -->
-  <div id="navLinks" class="hidden md:flex flex-wrap items-center gap-2">
-    <a id="favouritesBtn" href="favourites.html"
-      class="rounded-full bg-white/10 px-4 py-2 text-[12px] font-semibold text-white/80 hover:bg-white/15 active:bg-white/20 transition">
-      Favourites
-    </a>
+        <div class="flex items-center justify-center">
+          <div class="text-[18px] font-black uppercase caps text-white/85">
+            Grey Day
+          </div>
+        </div>
 
-    <a id="todaysPlanBtn" href="todaysplan.html"
-      class="rounded-full bg-white/10 px-4 py-2 text-[12px] font-semibold text-white/80 hover:bg-white/15 active:bg-white/20 transition">
-      Today's Plan
-    </a>
+        <div class="relative flex items-center gap-2 justify-end">
+          <form id="searchForm" class="w-full md:w-[420px]" role="search">
+            <label for="search" class="sr-only">Search city</label>
+            <input
+              id="search"
+              name="q"
+              placeholder="Search city (e.g., Vancouver)"
+              class="w-full rounded-full bg-white/55 backdrop-blur-xl ring-1 ring-white/25 px-4 py-2.5 text-[12px] text-slate-950 placeholder:text-slate-600/70 outline-none focus:ring-2 focus:ring-cyan-500/40"
+            />
+          </form>
 
-    <a id="weatherBtn" href="weather.html"
-      class="rounded-full bg-white/10 px-4 py-2 text-[12px] font-semibold text-white/80 hover:bg-white/15 active:bg-white/20 transition">
-      Weather
-    </a>
-  </div>
+          <a href="profile.html" id="profileBtn" aria-label="Profile"
+            class="shrink-0 rounded-full bg-white/10 p-2.5 text-white/80 hover:bg-white/15 active:bg-white/20 transition inline-flex items-center justify-center">
+            <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M12 12C14.7614 12 17 9.76142 17 7C17 4.23858 14.7614 2 12 2C9.23858 2 7 4.23858 7 7C7 9.76142 9.23858 12 12 12Z"
+                stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              <path d="M20.59 22C20.59 18.13 16.74 15 12 15C7.26 15 3.41 18.13 3.41 22"
+                stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </a>
 
-  <!-- Center logo (bigger) -->
-  <div class="flex items-center justify-center">
-    <div class="text-[18px] font-black uppercase caps text-white/85">
-      Grey Day
-    </div>
-  </div>
+          <button id="mobileMenuBtn" type="button" aria-label="Menu" aria-expanded="false"
+            class="md:hidden rounded-full bg-white/10 px-4 py-2 text-[12px] font-semibold text-white/80 hover:bg-white/15 active:bg-white/20 transition">
+            Menu
+          </button>
 
-  <!-- Right search + profile + menu -->
-  <div class="relative flex items-center gap-2 justify-end">
-
-    <form id="searchForm" class="w-full md:w-[420px]" role="search">
-      <label for="search" class="sr-only">Search city</label>
-      <input
-        id="search"
-        name="q"
-        placeholder="Search city (e.g., Vancouver)"
-        class="w-full rounded-full bg-white/55 backdrop-blur-xl ring-1 ring-white/25 px-4 py-2.5 text-[12px] text-slate-950 placeholder:text-slate-600/70 outline-none focus:ring-2 focus:ring-cyan-500/40"
-      />
-    </form>
-
-    <a href="profile.html" id="profileBtn" aria-label="Profile"
-      class="shrink-0 rounded-full bg-white/10 p-2.5 text-white/80 hover:bg-white/15 active:bg-white/20 transition inline-flex items-center justify-center">
-      <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <path d="M12 12C14.7614 12 17 9.76142 17 7C17 4.23858 14.7614 2 12 2C9.23858 2 7 4.23858 7 7C7 9.76142 9.23858 12 12 12Z"
-          stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-        <path d="M20.59 22C20.59 18.13 16.74 15 12 15C7.26 15 3.41 18.13 3.41 22"
-          stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-      </svg>
-    </a>
-
-    <!-- Menu button only on mobile -->
-    <button id="mobileMenuBtn" type="button" aria-label="Menu" aria-expanded="false"
-      class="md:hidden rounded-full bg-white/10 px-4 py-2 text-[12px] font-semibold text-white/80 hover:bg-white/15 active:bg-white/20 transition">
-      Menu
-    </button>
-
-    <!-- Mobile dropdown -->
-    <div id="mobileDropdown"
-      class="md:hidden hidden absolute right-0 top-[52px] w-56 rounded-[18px] bg-white/55 backdrop-blur-xl ring-1 ring-white/25 shadow-[0_20px_60px_rgba(0,0,0,0.35)] overflow-hidden">
-      <a href="favourites.html"
-        class="block px-4 py-3 text-[12px] font-semibold text-slate-900 hover:bg-black/10 transition">
-        Favourites
-      </a>
-      <a href="todaysplan.html"
-        class="block px-4 py-3 text-[12px] font-semibold text-slate-900 hover:bg-black/10 transition">
-        Today's Plan
-      </a>
-      <a href="weather.html"
-        class="block px-4 py-3 text-[12px] font-semibold text-slate-900 hover:bg-black/10 transition">
-        Weather
-      </a>
-      <a href="profile.html"
-        class="block px-4 py-3 text-[12px] font-semibold text-slate-900 hover:bg-black/10 transition border-t border-black/10">
-        Profile
-      </a>
-    </div>
-  </div>
-</nav>
-
+          <div id="mobileDropdown"
+            class="md:hidden hidden absolute right-0 top-[52px] w-56 rounded-[18px] bg-white/55 backdrop-blur-xl ring-1 ring-white/25 shadow-[0_20px_60px_rgba(0,0,0,0.35)] overflow-hidden">
+            <a href="favourites.html" class="block px-4 py-3 text-[12px] font-semibold text-slate-900 hover:bg-black/10 transition">Favourites</a>
+            <a href="todaysplan.html" class="block px-4 py-3 text-[12px] font-semibold text-slate-900 hover:bg-black/10 transition">Today's Plan</a>
+            <a href="weather.html" class="block px-4 py-3 text-[12px] font-semibold text-slate-900 hover:bg-black/10 transition">Weather</a>
+            <a href="profile.html" class="block px-4 py-3 text-[12px] font-semibold text-slate-900 hover:bg-black/10 transition border-t border-black/10">Profile</a>
+          </div>
+        </div>
+      </nav>
 
       <!-- Header line -->
       <div class="mt-6 flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
@@ -169,7 +276,7 @@
       </div>
 
       <!-- Main grid -->
-      <div class="mt-8 grid grid-cols-1 lg:grid-cols-[1fr_420px] gap-6 items-stretch">
+      <div class="mt-8 grid grid-cols-1 lg:grid-cols-[1fr_420px] gap-6 items-start">
 
         <!-- Map card -->
         <section class="rounded-[26px] bg-white/55 backdrop-blur-xl ring-1 ring-white/25 shadow-[0_20px_60px_rgba(0,0,0,0.35)] overflow-hidden">
@@ -182,11 +289,11 @@
               <div class="text-[10px] text-slate-700/60">Tip: click the map to explore</div>
             </div>
           </div>
-          <div id="map" class="h-[58vh] lg:h-[78vh] w-full"></div>
+          <div id="map" class="w-full h-[520px] lg:h-[680px]"></div>
         </section>
 
         <!-- Panel card -->
-        <aside class="rounded-[26px] bg-white/55 backdrop-blur-xl ring-1 ring-white/25 shadow-[0_20px_60px_rgba(0,0,0,0.35)] overflow-hidden">
+        <aside id="rightPanel" class="rounded-[26px] bg-white/55 backdrop-blur-xl ring-1 ring-white/25 shadow-[0_20px_60px_rgba(0,0,0,0.35)] overflow-hidden h-[520px] lg:h-[680px] flex flex-col">
           <div class="px-6 pt-6 pb-4 border-b border-black/10">
             <div class="flex items-start justify-between gap-3">
               <div>
@@ -202,7 +309,8 @@
             <p id="statusNote" class="mt-2 text-[11px] text-slate-700/70">Status: waiting</p>
           </div>
 
-          <div class="p-6 space-y-5">
+          <!-- Scroll area -->
+          <div class="p-6 space-y-5 overflow-y-auto">
             <div id="weather-app" class="rounded-[18px] bg-white/45 ring-1 ring-black/10 p-4">
               <div class="flex items-start justify-between gap-3">
                 <div>
@@ -221,8 +329,6 @@
                   class="rounded-full bg-black/10 px-4 py-2 text-[12px] font-semibold text-slate-800/80 hover:bg-black/15 active:bg-black/20 transition">
                   Legacy Refresh
                 </button>
-
-                
               </div>
             </div>
 
@@ -257,7 +363,8 @@
                 Finding activities...
               </div>
 
-              <div id="activities-list" class="mt-4 space-y-3 activities-list fixed-scroll-list"></div>
+              <!-- list -->
+              <div id="activities-list" class="mt-4 space-y-3"></div>
             </div>
 
             <p id="keyNote" class="text-[10px] text-slate-700/60">
@@ -274,66 +381,17 @@
   </div>
 
   <!-- Scripts -->
-   <script>
-  document.addEventListener("DOMContentLoaded", () => {
-    const locateBtn = document.getElementById("locateBtn");
-    const statusEl = document.getElementById("statusNote");
-
-    if (!locateBtn) return;
-
-    locateBtn.addEventListener("click", () => {
-      if (!navigator.geolocation) {
-        if (statusEl) statusEl.textContent = "Geolocation not supported in this browser.";
-        return;
-      }
-
-      // Geolocation requires HTTPS or localhost
-      if (location.protocol !== "https:" && location.hostname !== "localhost" && location.hostname !== "127.0.0.1") {
-        if (statusEl) statusEl.textContent = "Geolocation blocked (use HTTPS or localhost).";
-        return;
-      }
-
-      if (statusEl) statusEl.textContent = "Getting your location…";
-
-      navigator.geolocation.getCurrentPosition(
-        (pos) => {
-          const { latitude, longitude } = pos.coords;
-          if (statusEl) statusEl.textContent = `Location set: ${latitude.toFixed(4)}, ${longitude.toFixed(4)}`;
-
-          // If your existing code exposes a function, call it:
-          if (typeof window.setUserLocation === "function") {
-            window.setUserLocation(latitude, longitude);
-          }
-
-          // Also fire a custom event your scripts can listen to
-          window.dispatchEvent(new CustomEvent("user-location", {
-            detail: { lat: latitude, lng: longitude }
-          }));
-        },
-        (err) => {
-          console.warn("Geolocation error:", err);
-          if (statusEl) statusEl.textContent = "Couldn’t get your location (permission denied / timeout).";
-        },
-        { enableHighAccuracy: true, timeout: 8000 }
-      );
-    });
-  });
-</script>
-
   <script>
-    // Mobile dropdown behavior
+    // Mobile dropdown
     document.addEventListener("DOMContentLoaded", () => {
       const menuBtn = document.getElementById("mobileMenuBtn");
       const dropdown = document.getElementById("mobileDropdown");
-  
       if (menuBtn && dropdown) {
         menuBtn.addEventListener("click", (e) => {
           e.stopPropagation();
           const open = dropdown.classList.toggle("hidden") === false;
           menuBtn.setAttribute("aria-expanded", open ? "true" : "false");
         });
-  
-        // Close when tapping outside
         document.addEventListener("click", (e) => {
           if (!dropdown.classList.contains("hidden")) {
             const clickedInside = dropdown.contains(e.target) || menuBtn.contains(e.target);
@@ -343,8 +401,6 @@
             }
           }
         });
-  
-        // Close after clicking a link
         dropdown.querySelectorAll("a").forEach(a => {
           a.addEventListener("click", () => {
             dropdown.classList.add("hidden");
@@ -354,110 +410,79 @@
       }
     });
   </script>
-  
+
   <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+
   <script>
-    if (window.GOOGLE_MAPS_API_KEY && window.GOOGLE_MAPS_API_KEY.trim() && window.GOOGLE_MAPS_API_KEY !== 'AIzaSyDummyKey') {
-      const script = document.createElement('script');
-      script.src = `https://maps.googleapis.com/maps/api/js?key=${window.GOOGLE_MAPS_API_KEY}&libraries=places`;
-      script.defer = true;
-      document.head.appendChild(script);
+    // ✅ Leaflet resize safety
+    function invalidateLeafletMapSoon() {
+      setTimeout(() => {
+        if (window.map && typeof window.map.invalidateSize === "function") {
+          window.map.invalidateSize();
+        }
+      }, 250);
     }
+    window.addEventListener('resize', invalidateLeafletMapSoon);
   </script>
 
-  <!-- API Keys Quick-Edit UI -->
+  <!-- ✅ IMPORTANT: keep your app scripts as-is -->
+  <script src="maps.js" defer></script>
+  <script src="index.js" defer></script>
+  <script src="activities.js" defer></script>
+  <script src="chatbot.js" defer></script>
+
   <script>
-    // Render a small keys control in the panel for convenience (no persistence beyond sessionStorage)
-    function renderApiKeyControls() {
-      const panel = document.querySelector('.panel');
-      if (!panel || document.getElementById('api-key-controls')) return;
+    // ✅ Minimal chatbot open/close
+    document.addEventListener('DOMContentLoaded', () => {
+      const root = document.getElementById('gemini-chatbot');
+      const toggle = root?.querySelector('.chatbot-toggle');
+      const close = root?.querySelector('.chatbot-close');
+      if (toggle) toggle.addEventListener('click', () => root.classList.toggle('open'));
+      if (close) close.addEventListener('click', () => root.classList.remove('open'));
+    });
+  </script>
 
-      const container = document.createElement('div');
-      container.id = 'api-key-controls';
-      container.className = 'api-key-controls';
-      container.innerHTML = `
-        <div style="margin-top:6px;padding:8px;border-radius:8px;background:#f7f9fc;border:1px solid #eef3fb">
-          <div style="display:flex;gap:8px;flex-direction:column">
-            <label style="font-size:12px;color:#374151">Google Maps Key</label>
-            <input id="apiGoogleInput" placeholder="Paste Google Maps API key (session only)" style="padding:8px;border-radius:6px;border:1px solid #e6eef9" />
-            <label style="font-size:12px;color:#374151">OpenWeather Key</label>
-            <input id="apiWeatherInput" placeholder="OpenWeather API key" style="padding:8px;border-radius:6px;border:1px solid #e6eef9" />
-            <label style="font-size:12px;color:#374151">Gemini Key</label>
-            <input id="apiGeminiInput" placeholder="Gemini API key (optional)" style="padding:8px;border-radius:6px;border:1px solid #e6eef9" />
-            <div style="display:flex;gap:8px;margin-top:8px">
-              <button id="saveApiKeysBtn">Save & Apply (session)</button>
-              <button id="clearApiKeysBtn" style="background:#ef4444">Clear</button>
-              <button id="reloadPageBtn" style="background:#6b7280">Reload</button>
-            </div>
-            <div id="apiKeyStatus" style="font-size:12px;color:#6b7280;margin-top:6px"></div>
-          </div>
-        </div>
-      `;
-      panel.insertBefore(container, panel.firstChild);
+  <script>
+    /* ============================================================
+      ✅ KEEP YOUR ORIGINAL PLACE CARD LOOK + ADD:
+         - review block (Quick take)
+         - Website link (if available)
+         - Maps link (already there)
+      This will override any earlier placeToCard from other scripts.
+    ============================================================ */
 
-      // Fill inputs if we have session keys
-      try {
-        const g = sessionStorage.getItem('GOOGLE_MAPS_API_KEY') || '';
-        const w = sessionStorage.getItem('WEATHER_API_KEY') || '';
-        const gm = sessionStorage.getItem('GEMINI_API_KEY') || '';
-        document.getElementById('apiGoogleInput').value = g;
-        document.getElementById('apiWeatherInput').value = w;
-        document.getElementById('apiGeminiInput').value = gm;
-      } catch (e) {}
-
-      document.getElementById('saveApiKeysBtn').addEventListener('click', () => {
-        const g = document.getElementById('apiGoogleInput').value.trim();
-        const w = document.getElementById('apiWeatherInput').value.trim();
-        const gm = document.getElementById('apiGeminiInput').value.trim();
-        try {
-          if (g) sessionStorage.setItem('GOOGLE_MAPS_API_KEY', g);
-          else sessionStorage.removeItem('GOOGLE_MAPS_API_KEY');
-          if (w) sessionStorage.setItem('WEATHER_API_KEY', w);
-          else sessionStorage.removeItem('WEATHER_API_KEY');
-          if (gm) sessionStorage.setItem('GEMINI_API_KEY', gm);
-          else sessionStorage.removeItem('GEMINI_API_KEY');
-
-          // Apply to window for immediate use (maps.js may require reload for initial load)
-          window.GOOGLE_MAPS_API_KEY = g || undefined;
-          window.WEATHER_API_KEY = w || undefined;
-          window.GEMINI_API_KEY = gm || undefined;
-
-          const status = document.getElementById('apiKeyStatus');
-          status.textContent = 'Keys saved to session. For Maps JS to take effect, press Reload.';
-        } catch (e) {
-          console.warn('[index] Failed to save keys', e);
-        }
-      });
-
-      document.getElementById('clearApiKeysBtn').addEventListener('click', () => {
-        sessionStorage.removeItem('GOOGLE_MAPS_API_KEY');
-        sessionStorage.removeItem('WEATHER_API_KEY');
-        sessionStorage.removeItem('GEMINI_API_KEY');
-        window.GOOGLE_MAPS_API_KEY = undefined;
-        window.WEATHER_API_KEY = undefined;
-        window.GEMINI_API_KEY = undefined;
-        document.getElementById('apiGoogleInput').value = '';
-        document.getElementById('apiWeatherInput').value = '';
-        document.getElementById('apiGeminiInput').value = '';
-        document.getElementById('apiKeyStatus').textContent = 'Keys cleared from session.';
-      });
-
-      document.getElementById('reloadPageBtn').addEventListener('click', () => location.reload());
+    function escapeHtml(str) {
+      return String(str ?? "")
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;")
+        .replaceAll("'", "&#039;");
     }
 
-    // Render controls after DOM is ready
-    window.addEventListener('DOMContentLoaded', () => setTimeout(renderApiKeyControls, 200));
+    // ⭐ show stars based on rating out of 5
+    function stars(rating) {
+      const r = Math.max(0, Math.min(5, Number(rating || 0)));
+      const full = Math.floor(r);
+      const half = (r - full) >= 0.5 ? 1 : 0;
+      const empty = 5 - full - half;
+      return "★".repeat(full) + (half ? "☆" : "") + "·".repeat(empty);
+    }
 
-    /* --------------------------------------------
-       Curated plan integration (re-uses Places & Details logic)
-       Populates the existing #activities-list with cafe/dinner/relax picks
-    -------------------------------------------- */
-    function placeToCard(place, userLat, userLng) {
+    // ✅ This is the card style you had (rounded 18, same layout, with review + website)
+    window.placeToCard = function placeToCard(place, userLat, userLng) {
       const lat = Number(place?.geometry?.location?.lat);
       const lng = Number(place?.geometry?.location?.lng ?? place?.geometry?.location?.lon);
 
-      const distance = (isFinite(lat) && isFinite(lng))
-        ? (function() { const R = 6371; const dLat = (lat - userLat) * Math.PI/180; const dLon = (lng - userLng) * Math.PI/180; const a = Math.sin(dLat/2)**2 + Math.cos(userLat * Math.PI/180) * Math.cos(lat * Math.PI/180) * Math.sin(dLon/2)**2; const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a)); return R * c; })()
+      const distance = (isFinite(lat) && isFinite(lng) && isFinite(userLat) && isFinite(userLng))
+        ? (function() {
+            const R = 6371;
+            const dLat = (lat - userLat) * Math.PI/180;
+            const dLon = (lng - userLng) * Math.PI/180;
+            const a = Math.sin(dLat/2)**2 + Math.cos(userLat*Math.PI/180)*Math.cos(lat*Math.PI/180)*Math.sin(dLon/2)**2;
+            const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+            return R * c;
+          })()
         : null;
 
       const rating = place.rating != null ? Number(place.rating).toFixed(1) : "—";
@@ -469,218 +494,67 @@
         ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(place.name || "place")}&query_place_id=${encodeURIComponent(place.place_id)}`
         : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(place.name || "place")}`;
 
+      // Website: only shows if place.website exists (from Places Details). In demo mode, you can add `website` in demo objects.
+      const website = place.website || place.url || "";
+
       return `
-        <div class="rounded-[12px] bg-white/45 ring-1 ring-black/10 p-3">
+        <div class="rounded-[18px] bg-white/45 ring-1 ring-black/10 p-4">
           <div class="flex items-start justify-between gap-3">
             <div class="min-w-0">
-              <div class="text-[13px] font-extrabold tracking-tight text-slate-950 truncate">${(place.name || 'Untitled')}</div>
-              <div class="mt-1 flex items-center gap-2 text-[11px] text-slate-700/70">
-                <span class="font-semibold text-slate-900/70">★ ${rating}${total ? ` (${total})` : ''}</span>
-                ${distance != null ? `<span class="text-slate-700/50">•</span><span>${(distance < 1 ? Math.round(distance*1000)+'m' : distance.toFixed(1)+'km')}</span>` : ''}
+              <div class="text-[14px] font-extrabold tracking-tight text-slate-950 truncate">
+                ${escapeHtml(place.name || "Untitled")}
               </div>
-              ${address ? `<div class="mt-2 text-[11px] text-slate-700/65">${address}</div>` : ''}
-              ${topReview ? `<div class="mt-2 text-[11px] text-slate-800/80">“${(topReview.text||'').slice(0,140)}${topReview.text && topReview.text.length>140?'…':''}”</div>` : ''}
+
+              <div class="mt-1 flex flex-wrap items-center gap-2 text-[11px] text-slate-700/70">
+                <span class="font-semibold text-slate-900/70">★ ${escapeHtml(rating)}${total ? ` (${escapeHtml(total)})` : ""}</span>
+                <span class="text-slate-700/50">${escapeHtml(stars(place.rating))}</span>
+                ${distance != null ? `<span class="text-slate-700/50">•</span><span>${escapeHtml(distance < 1 ? Math.round(distance*1000)+'m' : distance.toFixed(1)+'km')}</span>` : ""}
+              </div>
+
+              ${address ? `<div class="mt-2 text-[11px] text-slate-700/65">${escapeHtml(address)}</div>` : ""}
+
+              ${topReview ? `
+                <div class="mt-3 rounded-[14px] bg-black/5 p-3">
+                  <div class="text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-700/70">Quick take</div>
+                  <div class="mt-1 text-[11px] text-slate-800/80">
+                    “${escapeHtml(String(topReview.text).slice(0, 140))}${topReview.text && topReview.text.length > 140 ? "…" : ""}”
+                  </div>
+                </div>
+              ` : ""}
+
+              ${website ? `
+                <div class="mt-3">
+                  <a href="${escapeHtml(website)}" target="_blank" rel="noreferrer"
+                     class="text-[11px] font-semibold text-slate-900/70 hover:text-slate-900 underline underline-offset-4">
+                    Visit website
+                  </a>
+                </div>
+              ` : ""}
             </div>
-            <a class="shrink-0 rounded-full bg-black/10 px-3 py-1 text-[11px] font-semibold text-slate-800/80 hover:bg-black/15 active:bg-black/20 transition" href="${mapsUrl}" target="_blank" rel="noreferrer">Maps</a>
+
+            <a class="shrink-0 rounded-full bg-black/10 px-3 py-1 text-[11px] font-semibold text-slate-800/80 hover:bg-black/15 active:bg-black/20 transition"
+               href="${mapsUrl}" target="_blank" rel="noreferrer">
+              Maps
+            </a>
           </div>
         </div>
       `;
-    }
+    };
 
-    async function curatePlanIndex() {
-      const listEl = document.getElementById('activities-list');
-      const loading = document.getElementById('activities-loading');
-      const status = document.getElementById('statusNote');
-      const user = window.lastCoords || { lat: 49.2827, lng: -123.1207 };
-      loading.style.display = 'block';
-      listEl.innerHTML = '';
-      if (status) status.textContent = 'Curating activities…';
-
-      try {
-        // Use the activities.js findNearbyPlaces (JS/REST/demo fallback) to get a broad pool
-        const pool = await findNearbyPlaces(user.lat, user.lng, DEFAULT_SEARCH_RADIUS) || [];
-        const seen = new Set();
-        const unique = [];
-        for (const p of pool) {
-          if (!p || !p.place_id) continue;
-          if (!seen.has(p.place_id)) { seen.add(p.place_id); unique.push(p); }
-        }
-
-        if (unique.length === 0) {
-          const demo = (typeof getDemoActivities === 'function') ? getDemoActivities(user.lat, user.lng) : [];
-          listEl.innerHTML = demo.map(p => placeToCard(p, user.lat, user.lng)).join('');
-          if (status) status.textContent = 'Showing demo activities (Places not available).';
-          return;
-        }
-
-        // Categorize by simple heuristics (type names or keywords)
-        const cafes = unique.filter(p => (p.types || []).some(t => /cafe|coffee|bakery|barista|espresso/.test(t))).slice(0,3);
-        const dinners = unique.filter(p => (p.types || []).some(t => /restaurant|food|diner|bar/.test(t))).slice(0,3);
-        const relax = unique.filter(p => (p.types || []).some(t => /bar|library|museum|store|book_store|art_gallery/.test(t))).slice(0,3);
-
-        const picks = [...cafes, ...dinners, ...relax].slice(0,9);
-
-        // Enrich top picks with details
-        const enriched = await Promise.all(picks.map(async p => {
-          try { const d = await getPlaceDetails(p.place_id); return d ? { ...p, ...d } : p; } catch(e){ return p; }
-        }));
-
-        listEl.innerHTML = enriched.map(p => placeToCard(p, user.lat, user.lng)).join('');
-        if (status) status.textContent = `Curated ${enriched.length} activities from Places`;
-      } catch (err) {
-        console.warn('[index] curatePlanIndex failed', err);
-        const demo = (typeof getDemoActivities === 'function') ? getDemoActivities(user.lat, user.lng) : [];
-        listEl.innerHTML = demo.map(p => placeToCard(p, user.lat, user.lng)).join('');
-        if (status) status.textContent = 'Error curating (see console); showing demo activities.';
-      } finally {
-        loading.style.display = 'none';
-      }
+    // ✅ If your scripts already render cards, no changes needed.
+    // But if you want to ensure map doesn't glitch when list changes:
+    const activitiesList = document.getElementById('activities-list');
+    if (activitiesList) {
+      const obs = new MutationObserver(() => invalidateLeafletMapSoon());
+      obs.observe(activitiesList, { childList: true, subtree: true });
     }
   </script>
+
   <script>
-    // Wire up curated plan triggers
-    document.addEventListener('DOMContentLoaded', () => {
-      const refreshBtn = document.getElementById('refreshBtn');
-      if (refreshBtn) refreshBtn.addEventListener('click', () => setTimeout(curatePlanIndex, 50));
-
-      window.addEventListener('user-location', (e) => {
-        try { window.lastCoords = { lat: e.detail.lat, lng: e.detail.lng }; } catch (err) {}
-        setTimeout(curatePlanIndex, 200);
-        // Also trigger the activities search after the location is set (short delay to allow scripts to initialize)
-        setTimeout(() => {
-          try { if (window.findActivities) window.findActivities(); } catch (err) { console.warn('[index] findActivities call failed', err); }
-        }, 300);
-      });
-
-      // Run once on load after a short delay to allow auto-locate to complete
-      setTimeout(() => { try { curatePlanIndex(); } catch(e){} }, 2000);
-    });
+    // ✅ Optional: add demo websites if you're in demo mode (you can edit these)
+    // If your activities.js uses demo objects, add `website` fields there too.
+    // Example only:
+    // window.DEMO_WEBSITES = { "demo_relax_1": "https://example.com" };
   </script>
-  <script src="maps.js" defer></script>
-  <script src="index.js" defer></script>
-  <script src="activities.js" defer></script>
-  <script src="chatbot.js" defer></script>
-  <style>
-    /* --- Floating Chatbot (minimal styling) --- */
-    #gemini-chatbot{
-      position: fixed;
-      right: 18px;
-      bottom: 18px;
-      z-index: 999999;
-      font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial;
-    }
-  
-    .chatbot-toggle{
-      width: 56px;
-      height: 56px;
-      border-radius: 999px;
-      display: grid;
-      place-items: center;
-      background: rgba(255,255,255,.12);
-      color: rgba(255,255,255,.9);
-      backdrop-filter: blur(14px);
-      border: 1px solid rgba(255,255,255,.22);
-      box-shadow: 0 18px 50px rgba(0,0,0,.45);
-      cursor: pointer;
-      transition: transform .15s ease, background .15s ease;
-    }
-    .chatbot-toggle:hover{ background: rgba(255,255,255,.16); }
-    .chatbot-toggle:active{ transform: scale(.98); }
-  
-    .chatbot-window{
-      width: min(92vw, 380px);
-      height: 520px;
-      margin-bottom: 12px;
-      border-radius: 22px;
-      overflow: hidden;
-      background: rgba(255,255,255,.60);
-      border: 1px solid rgba(255,255,255,.28);
-      backdrop-filter: blur(18px);
-      box-shadow: 0 28px 80px rgba(0,0,0,.50);
-      display: none;
-    }
-  
-    /* when open */
-    #gemini-chatbot.open .chatbot-window{ display: flex; flex-direction: column; }
-  
-    .chatbot-header{
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 10px;
-      padding: 14px 14px;
-      border-bottom: 1px solid rgba(0,0,0,.10);
-    }
-    .chatbot-header-content{ display: flex; gap: 10px; align-items: center; }
-    .chatbot-header h3{ font-weight: 800; font-size: 14px; line-height: 1.1; color: rgba(2,6,23,.92); }
-    .chatbot-subtitle{ font-size: 11px; color: rgba(2,6,23,.55); margin-top: 2px; }
-    .chatbot-close{
-      width: 34px; height: 34px; border-radius: 999px;
-      background: rgba(0,0,0,.08);
-      color: rgba(2,6,23,.72);
-      font-size: 18px;
-    }
-    .chatbot-close:hover{ background: rgba(0,0,0,.12); }
-  
-    .chatbot-messages{
-      flex: 1;
-      overflow: auto;
-      padding: 14px;
-    }
-    .chatbot-message{ margin-bottom: 10px; }
-    .chatbot-message .message-content{
-      font-size: 12px;
-      line-height: 1.35;
-      padding: 10px 12px;
-      border-radius: 16px;
-      border: 1px solid rgba(0,0,0,.08);
-    }
-    .chatbot-user .message-content{
-      background: rgba(2,6,23,.10);
-      color: rgba(2,6,23,.85);
-      margin-left: 36px;
-    }
-    .chatbot-assistant .message-content{
-      background: rgba(255,255,255,.70);
-      color: rgba(2,6,23,.85);
-      margin-right: 36px;
-    }
-  
-    .chatbot-input-container{
-      display: flex;
-      gap: 10px;
-      padding: 12px;
-      border-top: 1px solid rgba(0,0,0,.10);
-      background: rgba(255,255,255,.45);
-    }
-    .chatbot-input{
-      flex: 1;
-      border-radius: 999px;
-      padding: 10px 12px;
-      font-size: 12px;
-      outline: none;
-      border: 1px solid rgba(0,0,0,.10);
-      background: rgba(255,255,255,.70);
-    }
-    .chatbot-send{
-      width: 42px; height: 42px;
-      border-radius: 999px;
-      display: grid; place-items: center;
-      background: rgba(0,0,0,.10);
-      color: rgba(2,6,23,.8);
-    }
-    .chatbot-send:hover{ background: rgba(0,0,0,.14); }
-  
-    .typing-indicator{ display:flex; gap:6px; align-items:center; }
-    .typing-indicator span{
-      width: 6px; height: 6px; border-radius: 999px;
-      background: rgba(2,6,23,.45);
-      animation: bounce 1s infinite ease-in-out;
-    }
-    .typing-indicator span:nth-child(2){ animation-delay: .12s; }
-    .typing-indicator span:nth-child(3){ animation-delay: .24s; }
-    @keyframes bounce{ 0%,100%{ transform: translateY(0); opacity:.5; } 50%{ transform: translateY(-4px); opacity:1; } }
-  </style>
-  
 </body>
 </html>
