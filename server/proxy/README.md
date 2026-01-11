@@ -1,6 +1,6 @@
 # JourneyHacks Proxy
 
-A minimal Node/Express proxy that forwards requests for Google Places (Text Search, Details), OpenWeather, and Gemini (Generative Language) so you can keep API keys server-side and avoid browser CORS issues.
+A minimal Node/Express proxy that forwards requests for Google Places (Text Search, Details), OpenWeather, and Gemini (Generative Language) so you can keep API keys server-side and avoid browser CORS issues. -
 
 ## Setup
 
