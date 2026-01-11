@@ -1,5 +1,10 @@
 # 🌧️ Grey Day — About the Project
-# JourneyHacks 2026 - (MLH event)
+## JourneyHacks 2026 - (MLH event)
+
+## Live site
+https://greyday.netlify.app/
+## Demo
+https://youtu.be/lUtD3FgT2ZQ 
 
 ## The Idea
 
@@ -101,3 +106,4 @@ It’s a **Plan B for bad days**.
 
 It takes a moment of frustration, canceled plans, bad weather, boredom, and turns it into something positive:  
 a clear, simple, nearby way to still enjoy your day.
+
