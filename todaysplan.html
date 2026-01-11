@@ -26,9 +26,10 @@
     <script>
       window.GOOGLE_MAPS_API_KEY = "YOUR_GOOGLE_KEY";
       window.GEMINI_API_KEY = "YOUR_GEMINI_KEY"; // optional
+      window.WEATHER_API_KEY = "YOUR_OPENWEATHER_KEY"; // optional
+      // or window.INDEX_API_KEY
     </script>
   -->
-    
 </head>
 
 <body class="min-h-screen bg-slate-950 text-slate-900">
@@ -48,11 +49,21 @@
       <!-- Header -->
       <div class="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div>
-          <div class="text-[12px] font-semibold uppercase caps text-white/75">Today’s Plan</div>
-          <div class="mt-2 text-[40px] leading-none font-black tracking-tight text-white">
+          <div class="flex items-center gap-2">
+            <!-- ✅ Back button added (same style as your other pills) -->
+            <a href="./index.html"
+               class="rounded-full bg-white/10 px-4 py-2 text-[12px] font-semibold text-white/80 hover:bg-white/15 active:bg-white/20 transition">
+              ← Back
+            </a>
+
+            <div class="text-[12px] font-semibold uppercase caps text-white/75">Today’s Plan</div>
+          </div>
+
+          <div class="mt-3 text-[40px] leading-none font-black tracking-tight text-white">
             Curated for <span id="cityName" class="text-white/90">Vancouver</span>
             <span id="weatherSummary" class="ml-4 text-[16px] font-semibold text-white/70">— • —</span>
           </div>
+
           <div class="mt-3 text-[12px] uppercase tracking-[0.22em] text-white/60">
             <span id="dateValue">—</span> • <span id="timeValue">—</span><span class="ml-1" id="ampmValue">—</span>
           </div>
@@ -66,22 +77,19 @@
           <div class="flex flex-wrap items-center gap-2">
             <button id="useLocationBtn"
               class="rounded-full bg-white/10 px-4 py-2 text-[12px] font-semibold text-white/80 hover:bg-white/15 active:bg-white/20 transition"
-              type="button"
-            >
+              type="button">
               Use my location
             </button>
 
             <button id="refreshAllBtn"
               class="rounded-full bg-white/10 px-4 py-2 text-[12px] font-semibold text-white/80 hover:bg-white/15 active:bg-white/20 transition"
-              type="button"
-            >
+              type="button">
               Refresh plan
             </button>
 
             <button id="testKeyBtn"
               class="rounded-full bg-white/10 px-4 py-2 text-[12px] font-semibold text-white/80 hover:bg-white/15 active:bg-white/20 transition"
-              type="button"
-            >
+              type="button">
               Test API Key
             </button>
           </div>
@@ -106,8 +114,7 @@
               </div>
               <button id="refreshCafe"
                 class="rounded-full bg-black/10 px-3 py-1 text-[11px] font-semibold text-slate-800/80 hover:bg-black/15 active:bg-black/20 transition"
-                type="button"
-              >
+                type="button">
                 Refresh
               </button>
             </div>
@@ -131,8 +138,7 @@
               </div>
               <button id="refreshDinner"
                 class="rounded-full bg-black/10 px-3 py-1 text-[11px] font-semibold text-slate-800/80 hover:bg-black/15 active:bg-black/20 transition"
-                type="button"
-              >
+                type="button">
                 Refresh
               </button>
             </div>
@@ -156,8 +162,7 @@
               </div>
               <button id="refreshRelax"
                 class="rounded-full bg-black/10 px-3 py-1 text-[11px] font-semibold text-slate-800/80 hover:bg-black/15 active:bg-black/20 transition"
-                type="button"
-              >
+                type="button">
                 Refresh
               </button>
             </div>
@@ -181,8 +186,6 @@
   <script>
     /* --------------------------------------------
        activities.js — (adapted) core logic reuse
-       - Uses your key pattern: window.GOOGLE_MAPS_API_KEY, window.GEMINI_API_KEY
-       - Uses demo fallback when key is missing OR when CORS blocks browser fetch
     -------------------------------------------- */
 
     let currentUserLocation = null;
@@ -207,7 +210,6 @@
     const DEFAULT_SEARCH_RADIUS = 5000;
 
     // Prefer the Google Maps JavaScript PlacesService (avoids REST CORS issues)
-    // We create a small loader that resolves when the Maps JS and Places are available.
     let _placesLoader = null;
     let _placesService = null;
 
@@ -215,14 +217,9 @@
       if (_placesService) return Promise.resolve(_placesService);
       if (_placesLoader) return _placesLoader;
 
-      _placesLoader = new Promise((resolve, reject) => {
+      _placesLoader = new Promise((resolve) => {
         const apiKey = window.GOOGLE_MAPS_API_KEY;
-        const finishWithRest = () => {
-          // No JS API available; resolve with null (caller will fallback to REST/demo)
-          resolve(null);
-        };
 
-        // If google maps JS is already loaded and has places, create service
         if (window.google && google.maps && google.maps.places) {
           try {
             const root = document.getElementById('places-service-root') || document.createElement('div');
@@ -234,18 +231,16 @@
             return;
           } catch (e) {
             console.warn('[plan] PlacesService creation failed', e);
-            finishWithRest();
+            resolve(null);
             return;
           }
         }
 
-        // If no API key: can't load JS API; resolve null
         if (!apiKey || !apiKey.trim() || apiKey === 'AIzaSyDummyKey') {
           resolve(null);
           return;
         }
 
-        // Otherwise dynamically load the Maps JS with the places library
         const cbName = '__plan_places_loaded';
         window[cbName] = () => {
           try {
@@ -259,8 +254,7 @@
             console.warn('[plan] PlacesService creation after load failed', e);
             resolve(null);
           } finally {
-            // cleanup
-            try { delete window[cbName]; } catch (e) {}
+            try { delete window[cbName]; } catch {}
           }
         };
 
@@ -274,7 +268,6 @@
         };
         document.head.appendChild(script);
 
-        // safety timeout
         setTimeout(() => {
           if (!_placesService) resolve(null);
         }, timeout);
@@ -283,229 +276,98 @@
       return _placesLoader;
     }
 
-    // Get place details using the JS API if available, otherwise fall back to REST (best-effort)
-    // This function fetches real reviews from Google Maps Places API
     async function getPlaceDetails(placeId) {
       if (!placeId) return null;
 
       const svc = await ensurePlacesService();
       if (svc) {
         return new Promise((resolve) => {
-          // Request comprehensive fields including reviews, photos, and all relevant data
-          svc.getDetails({ 
-            placeId, 
-            fields: [
-              'name', 
-              'rating', 
-              'user_ratings_total', 
-              'reviews', 
-              'formatted_address', 
-              'geometry', 
-              'place_id',
-              'vicinity',
-              'types',
-              'opening_hours',
-              'price_level',
-              'photos'
-            ] 
-          }, (res, status) => {
-            if (status === google.maps.places.PlacesServiceStatus.OK && res) {
-              // Ensure reviews array exists (real Google Maps reviews)
-              if (res.reviews && Array.isArray(res.reviews)) {
-                console.log(`[plan] Fetched ${res.reviews.length} real reviews for ${res.name}`);
-              }
-              resolve(res);
-            } else {
-              console.warn('[plan] Places getDetails failed', status);
-              resolve(null);
-            }
+          svc.getDetails({ placeId, fields: ['name', 'rating', 'user_ratings_total', 'reviews', 'formatted_address', 'geometry', 'place_id'] }, (res, status) => {
+            if (status === google.maps.places.PlacesServiceStatus.OK && res) resolve(res);
+            else resolve(null);
           });
         });
       }
 
-      // fallback to REST (still subject to CORS):
       const apiKey = window.GOOGLE_MAPS_API_KEY;
       if (!apiKey || !apiKey.trim() || apiKey === 'AIzaSyDummyKey') return null;
 
       try {
-        // Request reviews field for real Google Maps reviews
-        const url = `https://maps.googleapis.com/maps/api/place/details/json?place_id=${placeId}&fields=name,rating,user_ratings_total,reviews,formatted_address,geometry,place_id,vicinity,types,opening_hours,price_level,photos&key=${apiKey}`;
+        const url = `https://maps.googleapis.com/maps/api/place/details/json?place_id=${placeId}&fields=name,rating,user_ratings_total,reviews,formatted_address,geometry,place_id&key=${apiKey}`;
         const response = await fetch(url);
-        if (!response.ok) {
-          console.warn('[plan] getPlaceDetails REST response not ok:', response.status);
-          return null;
-        }
+        if (!response.ok) return null;
         const data = await response.json();
-        if (data.status === 'OK' && data.result) {
-          // Log when we get real reviews
-          if (data.result.reviews && Array.isArray(data.result.reviews)) {
-            console.log(`[plan] Fetched ${data.result.reviews.length} real reviews for ${data.result.name} via REST`);
-          }
-          return data.result;
-        }
-        console.warn('[plan] getPlaceDetails REST status not OK:', data.status);
+        if (data.status === 'OK' && data.result) return data.result;
         return null;
-      } catch (e) {
-        console.warn('[plan] getPlaceDetails REST error', e);
+      } catch {
         return null;
       }
     }
 
-    // Single text search call: prefer JS PlacesService.textSearch if available
     async function textSearch(query, lat, lng, radius = DEFAULT_SEARCH_RADIUS) {
       const svc = await ensurePlacesService();
       if (svc) {
-        // Wrap JS textSearch in a promise and normalize to a {status, results} shape
         return new Promise((resolve) => {
-          const req = {
-            query,
-            location: new google.maps.LatLng(lat, lng),
-            radius
-          };
+          const req = { query, location: new google.maps.LatLng(lat, lng), radius };
           svc.textSearch(req, (results, status) => {
             if (status === google.maps.places.PlacesServiceStatus.OK && results) {
-              // Map LatLng to plain lat/lng
               const mapped = results.map(r => ({
                 ...r,
-                geometry: r.geometry && r.geometry.location ? { location: { lat: r.geometry.location.lat(), lng: r.geometry.location.lng() } } : r.geometry
+                geometry: r.geometry && r.geometry.location
+                  ? { location: { lat: r.geometry.location.lat(), lng: r.geometry.location.lng() } }
+                  : r.geometry
               }));
               resolve({ status: 'OK', results: mapped });
             } else {
-              console.warn('[plan] textSearch JS API failed', status);
               resolve({ status: 'ERROR' });
             }
           });
         });
       }
 
-      // fallback: REST textsearch
       const apiKey = window.GOOGLE_MAPS_API_KEY;
-      if (!apiKey || !apiKey.trim() || apiKey === 'AIzaSyDummyKey') {
-        return null; // will fall back to demo in caller
-      }
+      if (!apiKey || !apiKey.trim() || apiKey === 'AIzaSyDummyKey') return null;
 
       const url = `https://maps.googleapis.com/maps/api/place/textsearch/json?query=${encodeURIComponent(query)}&location=${lat},${lng}&radius=${radius}&key=${apiKey}`;
 
       try {
         const response = await fetch(url);
-        if (!response.ok) {
-          const t = await response.text().catch(() => "");
-          console.warn('[plan] Places request failed:', response.status, t);
-          return { status: 'ERROR' };
-        }
-        const data = await response.json();
-        return data;
-      } catch (err) {
-        console.warn('[plan] Places fetch error (likely CORS):', err);
+        if (!response.ok) return { status: 'ERROR' };
+        return await response.json();
+      } catch {
         return { status: 'ERROR' };
       }
     }
 
-    // Demo results (curated for the 3 parts)
     function getDemoPlan(lat, lng) {
       return {
         cafe: [
-          {
-            name: "Coffee Shop",
-            place_id: "demo_cafe_1",
-            geometry: { location: { lat: lat + 0.010, lng: lng + 0.012 } },
-            rating: 4.6,
-            user_ratings_total: 230,
-            types: ["cafe"],
-            formatted_address: "Downtown",
-            reviews: [{ author_name: "Lisa K.", rating: 5, text: "Perfect spot to wait out the rain—great espresso and cozy seating." }]
-          },
-          {
-            name: "Bookstore Café Corner",
-            place_id: "demo_cafe_2",
-            geometry: { location: { lat: lat + 0.006, lng: lng - 0.008 } },
-            rating: 4.7,
-            user_ratings_total: 98,
-            types: ["cafe", "book_store"],
-            formatted_address: "Gastown",
-            reviews: [{ author_name: "Noah P.", rating: 5, text: "Quiet vibe, good pastries, and a calm corner to plan the day." }]
-          },
-          {
-            name: "Minimal Roasters",
-            place_id: "demo_cafe_3",
-            geometry: { location: { lat: lat - 0.009, lng: lng + 0.004 } },
-            rating: 4.5,
-            user_ratings_total: 155,
-            types: ["cafe"],
-            formatted_address: "Mount Pleasant",
-            reviews: [{ author_name: "Sarah M.", rating: 4, text: "Great coffee, clean aesthetic, solid music." }]
-          }
+          { name: "Coffee Shop", place_id: "demo_cafe_1", geometry: { location: { lat: lat + 0.010, lng: lng + 0.012 } }, rating: 4.6, user_ratings_total: 230, formatted_address: "Downtown",
+            reviews: [{ author_name: "Lisa K.", rating: 5, text: "Perfect spot to wait out the rain—great espresso and cozy seating." }] },
+          { name: "Bookstore Café Corner", place_id: "demo_cafe_2", geometry: { location: { lat: lat + 0.006, lng: lng - 0.008 } }, rating: 4.7, user_ratings_total: 98, formatted_address: "Gastown",
+            reviews: [{ author_name: "Noah P.", rating: 5, text: "Quiet vibe, good pastries, and a calm corner to plan the day." }] },
+          { name: "Minimal Roasters", place_id: "demo_cafe_3", geometry: { location: { lat: lat - 0.009, lng: lng + 0.004 } }, rating: 4.5, user_ratings_total: 155, formatted_address: "Mount Pleasant",
+            reviews: [{ author_name: "Sarah M.", rating: 4, text: "Great coffee, clean aesthetic, solid music." }] }
         ],
         dinner: [
-          {
-            name: "Comfort Bowl House",
-            place_id: "demo_dinner_1",
-            geometry: { location: { lat: lat + 0.014, lng: lng + 0.002 } },
-            rating: 4.6,
-            user_ratings_total: 410,
-            types: ["restaurant"],
-            formatted_address: "Main St",
-            reviews: [{ author_name: "John D.", rating: 5, text: "Huge portions. Exactly the heavy meal you want on a cold day." }]
-          },
-          {
-            name: "Grill & Rice",
-            place_id: "demo_dinner_2",
-            geometry: { location: { lat: lat - 0.011, lng: lng - 0.010 } },
-            rating: 4.4,
-            user_ratings_total: 260,
-            types: ["restaurant"],
-            formatted_address: "Kitsilano",
-            reviews: [{ author_name: "Emma L.", rating: 4, text: "Protein-heavy, fast service, satisfying." }]
-          },
-          {
-            name: "Noodle + Broth Spot",
-            place_id: "demo_dinner_3",
-            geometry: { location: { lat: lat + 0.008, lng: lng + 0.015 } },
-            rating: 4.5,
-            user_ratings_total: 330,
-            types: ["restaurant"],
-            formatted_address: "Chinatown",
-            reviews: [{ author_name: "Mike R.", rating: 5, text: "Warm, filling, and perfect when the weather is gross." }]
-          }
+          { name: "Comfort Bowl House", place_id: "demo_dinner_1", geometry: { location: { lat: lat + 0.014, lng: lng + 0.002 } }, rating: 4.6, user_ratings_total: 410, formatted_address: "Main St",
+            reviews: [{ author_name: "John D.", rating: 5, text: "Huge portions. Exactly the heavy meal you want on a cold day." }] },
+          { name: "Grill & Rice", place_id: "demo_dinner_2", geometry: { location: { lat: lat - 0.011, lng: lng - 0.010 } }, rating: 4.4, user_ratings_total: 260, formatted_address: "Kitsilano",
+            reviews: [{ author_name: "Emma L.", rating: 4, text: "Protein-heavy, fast service, satisfying." }] },
+          { name: "Noodle + Broth Spot", place_id: "demo_dinner_3", geometry: { location: { lat: lat + 0.008, lng: lng + 0.015 } }, rating: 4.5, user_ratings_total: 330, formatted_address: "Chinatown",
+            reviews: [{ author_name: "Mike R.", rating: 5, text: "Warm, filling, and perfect when the weather is gross." }] }
         ],
         relax: [
-          {
-            name: "Vinyl Listening Bar",
-            place_id: "demo_relax_1",
-            geometry: { location: { lat: lat + 0.012, lng: lng - 0.004 } },
-            rating: 4.6,
-            user_ratings_total: 120,
-            types: ["bar"],
-            formatted_address: "Downtown",
-            reviews: [{ author_name: "Tom W.", rating: 5, text: "Great cocktails and music selection—super relaxing." }]
-          },
-          {
-            name: "Candle & Scent Lab",
-            place_id: "demo_relax_2",
-            geometry: { location: { lat: lat - 0.006, lng: lng + 0.010 } },
-            rating: 4.8,
-            user_ratings_total: 75,
-            types: ["store"],
-            formatted_address: "Mount Pleasant",
-            reviews: [{ author_name: "Ava S.", rating: 5, text: "Niche scents and calm vibes. You’ll leave happier." }]
-          },
-          {
-            name: "Public Library",
-            place_id: "demo_relax_3",
-            geometry: { location: { lat: lat + 0.015, lng: lng + 0.006 } },
-            rating: 4.7,
-            user_ratings_total: 89,
-            types: ["library"],
-            formatted_address: "Near you",
-            reviews: [{ author_name: "Chris B.", rating: 5, text: "Quiet, cozy, and a perfect rainy-day reset." }]
-          }
+          { name: "Vinyl Listening Bar", place_id: "demo_relax_1", geometry: { location: { lat: lat + 0.012, lng: lng - 0.004 } }, rating: 4.6, user_ratings_total: 120, formatted_address: "Downtown",
+            reviews: [{ author_name: "Tom W.", rating: 5, text: "Great cocktails and music selection—super relaxing." }] },
+          { name: "Candle & Scent Lab", place_id: "demo_relax_2", geometry: { location: { lat: lat - 0.006, lng: lng + 0.010 } }, rating: 4.8, user_ratings_total: 75, formatted_address: "Mount Pleasant",
+            reviews: [{ author_name: "Ava S.", rating: 5, text: "Niche scents and calm vibes. You’ll leave happier." }] },
+          { name: "Public Library", place_id: "demo_relax_3", geometry: { location: { lat: lat + 0.015, lng: lng + 0.006 } }, rating: 4.7, user_ratings_total: 89, formatted_address: "Near you",
+            reviews: [{ author_name: "Chris B.", rating: 5, text: "Quiet, cozy, and a perfect rainy-day reset." }] }
         ]
       };
     }
 
-    /* --------------------------------------------
-       UI helpers
-    -------------------------------------------- */
     function escapeHtml(str) {
       return String(str ?? "")
         .replaceAll("&", "&amp;")
@@ -526,12 +388,7 @@
       const rating = place.rating != null ? Number(place.rating).toFixed(1) : "—";
       const total = place.user_ratings_total != null ? place.user_ratings_total : "";
       const address = place.formatted_address || place.vicinity || "";
-      // Get the best/most relevant review (real Google Maps review)
-      const reviews = place.reviews && Array.isArray(place.reviews) ? place.reviews : [];
-      const topReview = reviews.length > 0 && reviews[0].text ? reviews[0] : null;
-      
-      // Check if this is a real place (not demo)
-      const isRealPlace = place.place_id && !place.place_id.startsWith('demo_');
+      const topReview = (place.reviews && place.reviews[0] && place.reviews[0].text) ? place.reviews[0] : null;
 
       const mapsUrl = place.place_id
         ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(place.name || "place")}&query_place_id=${encodeURIComponent(place.place_id)}`
@@ -554,15 +411,10 @@
 
               ${topReview ? `
                 <div class="mt-3 rounded-[14px] bg-black/5 p-3">
-                  <div class="flex items-center justify-between mb-1">
-                    <div class="text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-700/70">${isRealPlace ? 'Real review' : 'Quick take'}</div>
-                    ${topReview.rating ? `<div class="text-[10px] text-slate-700/70">⭐ ${topReview.rating}/5</div>` : ''}
-                  </div>
-                  ${topReview.author_name ? `<div class="text-[9px] text-slate-600/70 mb-1">${escapeHtml(topReview.author_name)}${topReview.relative_time_description ? ` • ${escapeHtml(topReview.relative_time_description)}` : ''}</div>` : ''}
+                  <div class="text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-700/70">Quick take</div>
                   <div class="mt-1 text-[11px] text-slate-800/80">
-                    "${escapeHtml(String(topReview.text).slice(0, 140))}${topReview.text && topReview.text.length > 140 ? "…" : ""}"
+                    “${escapeHtml(String(topReview.text).slice(0, 140))}${topReview.text && topReview.text.length > 140 ? "…" : ""}”
                   </div>
-                  ${reviews.length > 1 ? `<div class="mt-2 text-[9px] text-slate-600/60">+${reviews.length - 1} more review${reviews.length > 2 ? 's' : ''}</div>` : ''}
                 </div>
               ` : ""}
             </div>
@@ -580,25 +432,13 @@
       const stateEl = document.getElementById(stateId);
       const listEl = document.getElementById(listId);
 
-      if (loading) {
-        stateEl.textContent = "Loading…";
-        listEl.innerHTML = "";
-        return;
-      }
-
-      if (error) {
-        stateEl.textContent = error;
-        listEl.innerHTML = "";
-        return;
-      }
+      if (loading) { stateEl.textContent = "Loading…"; listEl.innerHTML = ""; return; }
+      if (error) { stateEl.textContent = error; listEl.innerHTML = ""; return; }
 
       stateEl.textContent = "";
       listEl.innerHTML = places.map(p => placeToCard(p, userLat, userLng)).join("");
     }
 
-    /* --------------------------------------------
-       Clock
-    -------------------------------------------- */
     function updateClock() {
       const d = new Date();
       let h = d.getHours();
@@ -614,49 +454,27 @@
     updateClock();
     setInterval(updateClock, 1000);
 
-    /* --------------------------------------------
-       Key status note (same UX as your other page)
-    -------------------------------------------- */
     (function showKeyStatus() {
       const note = document.getElementById('keyNote');
       const k = window.GOOGLE_MAPS_API_KEY;
       if (k && k.trim() && k !== 'AIzaSyDummyKey') {
         const masked = k.slice(0,4) + "..." + k.slice(-4);
-        console.info('[plan] Using Google Maps key (masked):', masked);
         if (note) note.textContent = `Google Maps key detected (masked): ${masked}`;
       } else {
-        console.warn('[plan] No Google Maps API key provided (or dummy). Using demo/fallback.');
         if (note) note.textContent = 'No Google Maps key detected (or dummy). Using demo/fallback.';
       }
     })();
 
-    // Warm up Places service loader if a key is present (non-blocking)
     if (window.GOOGLE_MAPS_API_KEY && window.GOOGLE_MAPS_API_KEY.trim() && window.GOOGLE_MAPS_API_KEY !== 'AIzaSyDummyKey') {
       ensurePlacesService().then(svc => {
         if (svc) console.info('[plan] Google Places JS loaded');
-        else console.warn('[plan] Google Maps key present but JS failed to load or was blocked');
       });
     }
 
     /* --------------------------------------------
-       Weather (OpenWeather) — reuse of index logic
+       Weather (OpenWeather) — minimal summary in header
     -------------------------------------------- */
     const WEATHER_DEFAULT = { lat: 49.2827, lng: -123.1207 };
-
-    function updateBackground(weatherId) {
-      document.body.classList.remove(
-        "weather-clear",
-        "weather-clouds",
-        "weather-rain",
-        "weather-snow"
-      );
-      if (weatherId >= 200 && weatherId < 600)
-        document.body.classList.add("weather-rain");
-      else if (weatherId >= 600 && weatherId < 700)
-        document.body.classList.add("weather-snow");
-      else if (weatherId === 800) document.body.classList.add("weather-clear");
-      else document.body.classList.add("weather-clouds");
-    }
 
     function showWeatherError(msg) {
       const status = document.getElementById("statusNote");
@@ -667,7 +485,6 @@
 
     function getDemoWeather() {
       return {
-        coord: { lat: WEATHER_DEFAULT.lat, lon: WEATHER_DEFAULT.lng },
         name: "Vancouver",
         main: { temp: 8 },
         weather: [{ id: 803, description: "Partly cloudy" }],
@@ -675,7 +492,6 @@
     }
 
     async function getWeatherByCoords(lat, lon) {
-      // choose key (same preference as index)
       const key =
         window.WEATHER_API_KEY && window.WEATHER_API_KEY.trim()
           ? window.WEATHER_API_KEY
@@ -683,36 +499,21 @@
           ? window.INDEX_API_KEY
           : null;
 
-      if (!key) {
-        console.info('[plan] No weather API key — using demo data');
-        updateWeatherUI(getDemoWeather());
-        return;
-      }
+      if (!key) { updateWeatherUI(getDemoWeather()); return; }
 
       const url = `https://api.openweathermap.org/data/2.5/weather?lat=${lat}&lon=${lon}&units=metric&appid=${key}`;
-      console.debug('[plan] Fetching weather:', url);
-
       try {
         const res = await fetch(url);
         if (!res.ok) {
-          let txt = '';
-          try { txt = await res.text(); } catch(e){}
-          console.warn('[plan] Weather fetch failed', res.status, txt);
-          if (res.status === 401 || res.status === 403) {
-            showWeatherError('API key invalid or not authorized (401/403).');
-          } else if (res.status === 429) {
-            showWeatherError('Rate limit exceeded (429).');
-          } else {
-            showWeatherError(`Weather request failed (status ${res.status}).`);
-          }
+          if (res.status === 401 || res.status === 403) showWeatherError('API key invalid or unauthorized (401/403).');
+          else if (res.status === 429) showWeatherError('Rate limit exceeded (429).');
+          else showWeatherError(`Weather request failed (status ${res.status}).`);
           updateWeatherUI(getDemoWeather());
           return;
         }
-
         const data = await res.json();
         updateWeatherUI(data);
-      } catch (err) {
-        console.error('[plan] Weather fetch error', err);
+      } catch {
         showWeatherError('Network error while fetching weather.');
         updateWeatherUI(getDemoWeather());
       }
@@ -721,15 +522,11 @@
     function updateWeatherUI(data) {
       const temp = Math.round(data.main?.temp ?? 0);
       const desc = data.weather?.[0]?.description ?? '—';
-      const city = data.name || document.getElementById('cityName')?.textContent || '—';
-
+      const city = data.name || '—';
       const summary = document.getElementById('weatherSummary');
       const cityEl = document.getElementById('cityName');
       if (summary) summary.textContent = `${temp}°C • ${desc}`;
       if (cityEl) cityEl.textContent = city;
-
-      const weatherId = data.weather?.[0]?.id || 800;
-      updateBackground(weatherId);
     }
 
     async function testAPIKey() {
@@ -740,39 +537,21 @@
           ? window.INDEX_API_KEY
           : null;
       const note = document.getElementById('keyNote');
-      if (!key) {
-        const msg = 'No API key set. Add one via inline script before this HTML.';
-        console.info('[plan] ' + msg);
-        if (note) note.textContent = msg;
-        return;
-      }
+      if (!key) { if (note) note.textContent = 'No API key set.'; return; }
 
       const testUrl = `https://api.openweathermap.org/data/2.5/weather?q=London&units=metric&appid=${key}`;
-      console.debug('[plan] Testing API key with', testUrl);
-
       try {
         const res = await fetch(testUrl);
-        let info = '';
-        try { info = await res.text(); } catch(e) { info = ''; }
-
+        const txt = await res.text().catch(() => "");
         if (!res.ok) {
-          console.warn('[plan] Test request failed', res.status, info);
-          if (note) {
-            if (res.status === 401 || res.status === 403)
-              note.textContent = 'API key invalid or unauthorized (401/403).';
-            else if (res.status === 429)
-              note.textContent = 'Rate limit exceeded (429).';
-            else note.textContent = `Test request failed (status ${res.status}).`;
-          }
+          if (note) note.textContent = (res.status === 401 || res.status === 403)
+            ? 'API key invalid or unauthorized (401/403).'
+            : (res.status === 429) ? 'Rate limit exceeded (429).' : `Test failed (status ${res.status}).`;
           return;
         }
-
-        const data = JSON.parse(info || '{}');
-        console.info('[plan] Test success', data);
-        if (note)
-          note.textContent = `API key looks OK — sample: ${data.name || 'Unknown'}, ${Math.round(data.main?.temp || 0)}°C`;
-      } catch (err) {
-        console.error('[plan] API key test error', err);
+        const data = JSON.parse(txt || "{}");
+        if (note) note.textContent = `API key OK — sample: ${data.name || 'Unknown'}, ${Math.round(data.main?.temp || 0)}°C`;
+      } catch {
         if (note) note.textContent = 'Network error while testing API key';
       }
     }
@@ -780,10 +559,7 @@
     function tryAutoLocateOnLoad() {
       const status = document.getElementById('statusNote');
       if (!navigator.geolocation) {
-        const msg = 'Geolocation not supported by your browser.';
-        console.info('[plan] ' + msg);
-        if (status) status.textContent = msg;
-        // fallback
+        if (status) status.textContent = 'Geolocation not supported.';
         getWeatherByCoords(WEATHER_DEFAULT.lat, WEATHER_DEFAULT.lng);
         return;
       }
@@ -792,12 +568,10 @@
       navigator.geolocation.getCurrentPosition(
         (pos) => {
           const { latitude: lat, longitude: lon } = pos.coords;
-          console.info('[plan] Located user', lat, lon);
           if (status) status.textContent = 'Using your location';
           getWeatherByCoords(lat, lon);
         },
-        (err) => {
-          console.warn('[plan] Geolocation failed', err);
+        () => {
           if (status) status.textContent = 'Unable to determine location. Showing default location.';
           getWeatherByCoords(WEATHER_DEFAULT.lat, WEATHER_DEFAULT.lng);
         },
@@ -805,13 +579,8 @@
       );
     }
 
-    /* --------------------------------------------
-       Curation logic: 3 parts, 3 items each
-       NOTE: Google Places REST /json often blocks browser CORS.
-       If blocked, we automatically show demo picks.
-    -------------------------------------------- */
     async function curatePlan() {
-      const userLat = currentUserLocation?.lat ?? 49.2827;      // Vancouver fallback
+      const userLat = currentUserLocation?.lat ?? 49.2827;
       const userLng = currentUserLocation?.lng ?? -123.1207;
 
       setList("cafeState", "cafeList",   { loading: true, userLat, userLng });
@@ -820,90 +589,39 @@
 
       const status = document.getElementById("statusNote");
 
-      // Check for JS Places support
-      const svc = await ensurePlacesService();
-      if (svc) {
-        if (status) status.textContent = 'Using Google Places JS for real-world activities with real reviews.';
-      } else if (window.GOOGLE_MAPS_API_KEY && window.GOOGLE_MAPS_API_KEY.trim() && window.GOOGLE_MAPS_API_KEY !== 'AIzaSyDummyKey') {
-        if (status) status.textContent = 'Google Maps key detected; using REST Places for real activities (may be blocked by browser CORS).';
-      } else {
-        if (status) status.textContent = 'No Google Maps key — showing demo picks. Add window.GOOGLE_MAPS_API_KEY for real activities and reviews.';
-      }
-
-      // Queries for each part
       const qCafe  = "specialty coffee cafe near me";
       const qDinner= "dinner restaurant hearty meal near me";
       const qRelax = "cocktail bar OR vinyl shop OR candle store OR library near me";
 
-      // Run in parallel
       const [cafeRes, dinnerRes, relaxRes] = await Promise.allSettled([
         textSearch(qCafe, userLat, userLng),
         textSearch(qDinner, userLat, userLng),
         textSearch(qRelax, userLat, userLng),
       ]);
 
-      // If anything errors (CORS or other), fall back to demo
       const anyBad =
         [cafeRes, dinnerRes, relaxRes].some(r => r.status !== "fulfilled" || !r.value || r.value.status === "ERROR" || r.value.status === "REQUEST_DENIED");
 
       if (anyBad) {
         if (status) status.textContent = "Showing demo picks (browser CORS / key / Places REST). For production, call Places from a server/proxy.";
         const demo = getDemoPlan(userLat, userLng);
-
         setList("cafeState", "cafeList",   { places: demo.cafe.slice(0,3), userLat, userLng });
         setList("dinnerState", "dinnerList",{ places: demo.dinner.slice(0,3), userLat, userLng });
         setList("relaxState", "relaxList", { places: demo.relax.slice(0,3), userLat, userLng });
         return;
       }
 
-      // Otherwise: parse results and normalize geometry
-      function normalizeResults(res) {
-        const arr = (res.results || []);
-        return arr
-          .map(p => {
-            // if geometry is LatLng (JS API), ensure plain lat/lng numbers
-            if (p.geometry && p.geometry.location && typeof p.geometry.location.lat === 'function') {
-              return { ...p, geometry: { location: { lat: p.geometry.location.lat(), lng: p.geometry.location.lng() } } };
-            }
-            // ensure lat/lng fields exist
-            if (p.geometry && p.geometry.location && (p.geometry.location.lat == null) && (p.geometry.location.lon != null)) {
-              return { ...p, geometry: { location: { lat: p.geometry.location.lat || p.geometry.location.lat, lng: p.geometry.location.lon } } };
-            }
-            return p;
-          })
-          .filter(p => p.geometry && p.geometry.location && isFinite(Number(p.geometry.location.lat)) && isFinite(Number(p.geometry.location.lng)));
-      }
+      const cafePlaces   = (cafeRes.value.results || []).slice(0, 6);
+      const dinnerPlaces = (dinnerRes.value.results || []).slice(0, 6);
+      const relaxPlaces  = (relaxRes.value.results || []).slice(0, 8);
 
-      const cafePlaces   = normalizeResults(cafeRes.value).slice(0, 6);
-      const dinnerPlaces = normalizeResults(dinnerRes.value).slice(0, 6);
-      const relaxPlaces  = normalizeResults(relaxRes.value).slice(0, 8);
-
-      // Fetch details (reviews) - ensures we get real Google Maps reviews
       async function enrich(list) {
-        const picks = list.slice(0, 5); // Get more to ensure we have enough with reviews
+        const picks = list.slice(0, 4);
         const settled = await Promise.allSettled(picks.map(async p => {
-          const placeId = p.place_id || p.placeId;
-          if (!placeId || placeId.startsWith('demo_')) {
-            // Skip demo places - they don't have real reviews
-            return p;
-          }
-          const details = await getPlaceDetails(placeId);
-          if (details) {
-            // Merge details, preserving reviews from Google Maps
-            const enriched = { ...p, ...details };
-            // Ensure reviews are preserved (real Google Maps reviews)
-            if (details.reviews && Array.isArray(details.reviews)) {
-              enriched.reviews = details.reviews;
-            }
-            return enriched;
-          }
-          // If details fetch failed, return original but log it
-          console.warn(`[plan] Could not fetch details for ${p.name}, using basic info`);
-          return p;
+          const details = await getPlaceDetails(p.place_id);
+          return details ? { ...p, ...details } : p;
         }));
-        return settled
-          .filter(x => x.status === "fulfilled" && x.value)
-          .map(x => x.value);
+        return settled.filter(x => x.status === "fulfilled" && x.value).map(x => x.value);
       }
 
       const [cafeEn, dinnerEn, relaxEn] = await Promise.allSettled([
@@ -916,32 +634,18 @@
       const dinners = (dinnerEn.status === "fulfilled" ? dinnerEn.value : dinnerPlaces).slice(0,3);
       const relaxes = (relaxEn.status === "fulfilled" ? relaxEn.value : relaxPlaces).slice(0,3);
 
-      // Count how many places have real reviews
-      const placesWithReviews = [...cafes, ...dinners, ...relaxes].filter(p => 
-        p.reviews && Array.isArray(p.reviews) && p.reviews.length > 0 && !p.place_id?.startsWith('demo_')
-      ).length;
-      
-      if (status) {
-        if (placesWithReviews > 0) {
-          status.textContent = `Plan curated with real Google Maps activities (${placesWithReviews} with reviews).`;
-        } else {
-          status.textContent = "Plan curated from Google Places results.";
-        }
-      }
-
+      if (status) status.textContent = "Plan curated from Places results (best-effort).";
       setList("cafeState", "cafeList",   { places: cafes, userLat, userLng });
       setList("dinnerState", "dinnerList",{ places: dinners, userLat, userLng });
       setList("relaxState", "relaxList", { places: relaxes, userLat, userLng });
     }
 
-    /* --------------------------------------------
-       Location controls
-    -------------------------------------------- */
     async function useMyLocation() {
       const status = document.getElementById("statusNote");
       if (!navigator.geolocation) {
         if (status) status.textContent = "Geolocation not supported. Using Vancouver default.";
         currentUserLocation = { lat: 49.2827, lng: -123.1207 };
+        await getWeatherByCoords(49.2827, -123.1207);
         await curatePlan();
         return;
       }
@@ -955,8 +659,7 @@
           await getWeatherByCoords(pos.coords.latitude, pos.coords.longitude);
           await curatePlan();
         },
-        async (err) => {
-          console.warn("[plan] Geolocation error:", err);
+        async () => {
           if (status) status.textContent = "Couldn’t get your location. Using Vancouver default.";
           currentUserLocation = { lat: 49.2827, lng: -123.1207 };
           await getWeatherByCoords(49.2827, -123.1207);
@@ -966,9 +669,6 @@
       );
     }
 
-    /* --------------------------------------------
-       Init
-    -------------------------------------------- */
     window.addEventListener("DOMContentLoaded", () => {
       document.getElementById("useLocationBtn").addEventListener("click", useMyLocation);
       document.getElementById("refreshAllBtn").addEventListener("click", curatePlan);
@@ -979,9 +679,7 @@
       const testBtn = document.getElementById('testKeyBtn');
       if (testBtn) testBtn.addEventListener('click', testAPIKey);
 
-      // default load (Vancouver fallback)
       currentUserLocation = { lat: 49.2827, lng: -123.1207 };
-      // try to get local weather (falls back to default)
       tryAutoLocateOnLoad();
       curatePlan();
     });
