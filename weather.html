@@ -7,6 +7,16 @@
 
   <script src="https://cdn.tailwindcss.com"></script>
 
+  <!-- ================= API KEYS ================= -->
+  <script>
+    // Weather key (required)
+    window.WEATHER_API_KEY = "736185ae3214d80248deba0bc59a9c16";
+
+    // Google key (optional but improves location label)
+    // Make sure Geocoding API is enabled + key restrictions allow it.
+    window.GOOGLE_MAPS_API_KEY = "AIzaSyBLxPuSPPd9VsFhC6LOJdk_5dGwAQVIBAE";
+  </script>
+
   <style>
     .grain::before{
       content:"";
@@ -26,11 +36,9 @@
 
     <!-- Background -->
     <div class="absolute inset-0">
-      <!-- IDs so JS can theme them (pressure-based) -->
       <div id="blobPrimary" class="absolute -left-32 top-10 h-[520px] w-[520px] rounded-full blur-[80px]"></div>
       <div id="blobSecondary" class="absolute left-40 top-24 h-[540px] w-[540px] rounded-full blur-[90px]"></div>
       <div class="absolute right-[-140px] bottom-[-140px] h-[620px] w-[620px] rounded-full bg-slate-900/70 blur-[70px]"></div>
-
       <div class="absolute inset-0 bg-gradient-to-b from-black/10 via-black/25 to-black/60"></div>
       <div class="grain absolute inset-0"></div>
     </div>
@@ -39,21 +47,15 @@
     <div class="relative mx-auto flex min-h-screen max-w-6xl items-end justify-center px-6 py-10">
 
       <!-- Card -->
-      <div id="weather-app"
-        class="w-full max-w-[1000px] min-h-[750px] rounded-[34px] bg-white/55 backdrop-blur-xl ring-1 ring-white/35 shadow-[0_28px_80px_rgba(0,0,0,0.45)] overflow-hidden"
-      >
+      <div class="w-full max-w-[1000px] min-h-[750px] rounded-[34px] bg-white/55 backdrop-blur-xl ring-1 ring-white/35 shadow-[0_28px_80px_rgba(0,0,0,0.45)] overflow-hidden">
         <div class="px-6 sm:px-8 pt-8 sm:pt-10 pb-24 sm:pb-28">
 
-          <!-- TOP ROW: NAV + HEADER -->
+          <!-- TOP ROW -->
           <div class="flex flex-col gap-5 sm:flex-row sm:items-start sm:justify-between">
-
-            <!-- Left: Title + dots -->
             <div class="flex items-center gap-4">
               <div class="text-[12px] font-semibold uppercase caps text-slate-800/90">
                 Today’s Vibe
               </div>
-
-              <!-- dots recolored by level -->
               <div class="flex gap-2">
                 <span class="vibe-dot h-3 w-3 rounded-full"></span>
                 <span class="vibe-dot h-3 w-3 rounded-full"></span>
@@ -61,21 +63,16 @@
               </div>
             </div>
 
-            <!-- Right: NAV buttons + city/date/refresh -->
             <div class="flex flex-col items-start sm:items-end gap-3">
-              <!-- NAV BUTTONS -->
               <nav class="flex flex-wrap gap-2">
-                <!-- If you have separate pages, set hrefs to your routes/files -->
                 <a href="./index.html"
                    class="rounded-full bg-black/10 px-4 py-2 text-[12px] font-semibold text-slate-800/80 hover:bg-black/15 active:bg-black/20 transition">
                   Home
                 </a>
-
                 <a href="./todaysplan.html"
                    class="rounded-full bg-black/10 px-4 py-2 text-[12px] font-semibold text-slate-800/80 hover:bg-black/15 active:bg-black/20 transition">
                   Today’s Plan
                 </a>
-
                 <a href="./favourites.html"
                    class="rounded-full bg-black/10 px-4 py-2 text-[12px] font-semibold text-slate-800/80 hover:bg-black/15 active:bg-black/20 transition">
                   Favourites
@@ -86,7 +83,7 @@
               <div class="hidden sm:flex flex-col items-end gap-1">
                 <div class="flex items-center gap-2">
                   <div class="rounded-full bg-black/10 px-3 py-1 text-[11px] font-medium text-slate-800/80">
-                    <span id="city">Vancouver</span>
+                    <span id="city">Locating…</span>
                   </div>
 
                   <button id="refreshBtn"
@@ -122,7 +119,6 @@
 
           <!-- Metrics -->
           <div class="mt-8 grid grid-cols-2 lg:grid-cols-4 gap-x-8 gap-y-8">
-            <!-- Pressure -->
             <div class="flex flex-col">
               <div class="text-[12px] font-semibold uppercase caps text-slate-700/75">Pressure</div>
               <div class="mt-2 flex items-baseline gap-2">
@@ -131,17 +127,14 @@
               </div>
             </div>
 
-            <!-- Temperature -->
             <div class="flex flex-col">
               <div class="text-[12px] font-semibold uppercase caps text-slate-700/75">Temperature</div>
               <div class="mt-2 flex items-baseline gap-2">
                 <div id="tempValue" class="text-[34px] font-extrabold">—</div>
                 <div class="text-[18px] font-bold tracking-[0.18em]">°C</div>
               </div>
-              <div id="temp" class="hidden"></div>
             </div>
 
-            <!-- Humidity -->
             <div class="flex flex-col">
               <div class="text-[12px] font-semibold uppercase caps text-slate-700/75">Humidity</div>
               <div class="mt-2 flex items-baseline gap-2">
@@ -150,7 +143,6 @@
               </div>
             </div>
 
-            <!-- Sunset -->
             <div class="flex flex-col">
               <div class="text-[12px] font-semibold uppercase caps text-slate-700/75">Sunset</div>
               <div class="mt-2 flex items-baseline gap-2">
@@ -160,7 +152,7 @@
             </div>
           </div>
 
-          <!-- Jacket Meter -->
+          <!-- Jacket Meter (RESTORED) -->
           <div class="mt-10">
             <div class="text-[12px] font-semibold uppercase tracking-[0.22em] text-slate-700/75">
               Jacket Meter
@@ -182,7 +174,6 @@
             Conditions may change — check again before heading out.
           </div>
 
-          <div id="keyNote" class="mt-3 text-center text-[10px] text-slate-700/55"></div>
         </div>
 
         <div class="h-3 bg-black/10"></div>
@@ -191,7 +182,7 @@
   </div>
 
   <script>
-    /* ---------- CLOCK (device time) ---------- */
+    /* ---------- CLOCK ---------- */
     function updateClock() {
       const d = new Date();
       let h = d.getHours();
@@ -207,7 +198,7 @@
     updateClock();
     setInterval(updateClock, 1000);
 
-    /* ---------- PRESSURE -> THEME + METER ---------- */
+    /* ---------- PRESSURE → THEME + METER ---------- */
     function levelFromPressure(hPa) {
       if (hPa >= 1018) return 1;
       if (hPa >= 1008) return 2;
@@ -265,78 +256,120 @@
       return { time: `${h}:${m}`, ampm };
     }
 
-    /* ---------- WEATHER (OpenWeather) ---------- */
-    const CITY = "Vancouver";
-    const FALLBACK_KEY = "736185ae3214d80248deba0bc59a9c16";
-    const API_KEY = (window.INDEX_API_KEY && window.INDEX_API_KEY.trim())
-      ? window.INDEX_API_KEY
-      : (window.WEATHER_API_KEY && window.WEATHER_API_KEY.trim())
-        ? window.WEATHER_API_KEY
-        : FALLBACK_KEY;
+    /* ---------- LOCATION LABEL (optional) ---------- */
+    function pickAddressPart(components, types) {
+      return components.find(c => types.some(t => c.types.includes(t))) || null;
+    }
 
-    (function showKeyStatus() {
-      const note = document.getElementById('keyNote');
-      if (API_KEY && API_KEY !== FALLBACK_KEY) {
-        if (note) note.textContent = 'Using page API key (masked): ' + API_KEY.slice(0,4) + '...' + API_KEY.slice(-4);
-      } else if (API_KEY === FALLBACK_KEY) {
-        if (note) note.textContent = 'Using fallback embedded API key. For production, set window.INDEX_API_KEY.';
-      } else {
-        if (note) note.textContent = 'No API key provided — demo mode.';
-      }
-    })();
+    async function tryBetterCityLabel(lat, lon) {
+      const key = (window.GOOGLE_MAPS_API_KEY || "").trim();
+      if (!key) return null;
 
-    async function getWeather() {
       try {
-        const url = `https://api.openweathermap.org/data/2.5/weather?q=${encodeURIComponent(CITY)}&units=metric&appid=${API_KEY}`;
-        const res = await fetch(url);
-
-        if (!res.ok) {
-          const descEl = document.getElementById('desc');
-          if (descEl) descEl.textContent = `Weather request failed (${res.status}).`;
-          return;
-        }
-
+        const res = await fetch(
+          `https://maps.googleapis.com/maps/api/geocode/json?latlng=${lat},${lon}&key=${encodeURIComponent(key)}`
+        );
         const data = await res.json();
+        if (data.status !== "OK") return null;
 
-        const temp = Math.round(data.main.temp);
-        const humidity = Math.round(data.main.humidity);
-        const pressure = Math.round(data.main.pressure);
+        const comps = data.results?.[0]?.address_components || [];
+        const neighborhood = pickAddressPart(comps, ["neighborhood", "sublocality", "sublocality_level_1"]);
+        const locality = pickAddressPart(comps, ["locality"]);
+        const region = pickAddressPart(comps, ["administrative_area_level_1"]);
 
-        const desc = data.weather[0].description;
+        // Prefer: "Neighborhood, City" or "City, Region"
+        if (neighborhood && locality) return `${neighborhood.long_name}, ${locality.long_name}`;
+        if (locality && region) return `${locality.long_name}, ${region.short_name}`;
+        if (locality) return locality.long_name;
+        if (region) return region.long_name;
 
-        document.getElementById("city").textContent = data.name ?? CITY;
-        document.getElementById("tempValue").textContent = `${temp}`;
-        document.getElementById("desc").textContent = desc;
-        document.getElementById("humidityValue").textContent = `${humidity}`;
-        document.getElementById("pressureValue").textContent = `${pressure}`;
-
-        const sunsetUnix = data.sys?.sunset;
-        if (sunsetUnix) {
-          const s = formatTo12h(new Date(sunsetUnix * 1000));
-          document.getElementById("sunsetValue").textContent = s.time;
-          document.getElementById("sunsetAmpm").textContent = s.ampm;
-        } else {
-          document.getElementById("sunsetValue").textContent = "—";
-          document.getElementById("sunsetAmpm").textContent = "—";
-        }
-
-        const level = levelFromPressure(pressure);
-        applyTheme(level);
-        setMeter(meterFromPressure(pressure));
-      } catch (err) {
-        const descEl = document.getElementById("desc");
-        if (descEl) descEl.textContent = "Network error while fetching weather";
+        return null;
+      } catch {
+        return null;
       }
     }
 
-    window.addEventListener('DOMContentLoaded', () => {
+    /* ---------- WEATHER (OpenWeather) ---------- */
+    async function getWeatherByCoords(lat, lon) {
+      const key = (window.WEATHER_API_KEY || "").trim();
+      if (!key) return;
+
+      const url = `https://api.openweathermap.org/data/2.5/weather?lat=${lat}&lon=${lon}&units=metric&appid=${encodeURIComponent(key)}`;
+
+      const res = await fetch(url);
+      if (!res.ok) return;
+
+      const data = await res.json();
+
+      const temp = Math.round(data.main?.temp ?? 0);
+      const humidity = Math.round(data.main?.humidity ?? 0);
+      const pressure = Math.round(data.main?.pressure ?? 1013);
+      const desc = data.weather?.[0]?.description ?? "—";
+
+      document.getElementById("tempValue").textContent = `${temp}`;
+      document.getElementById("humidityValue").textContent = `${humidity}`;
+      document.getElementById("pressureValue").textContent = `${pressure}`;
+      document.getElementById("desc").textContent = desc;
+
+      // ✅ Reliable city label from OpenWeather (fixes "near you")
+      const cityEl = document.getElementById("city");
+      const weatherCity = data.name ? String(data.name) : null;
+      if (weatherCity) cityEl.textContent = weatherCity;
+
+      // Sunset
+      const sunsetUnix = data.sys?.sunset;
+      if (sunsetUnix) {
+        const s = formatTo12h(new Date(sunsetUnix * 1000));
+        document.getElementById("sunsetValue").textContent = s.time;
+        document.getElementById("sunsetAmpm").textContent = s.ampm;
+      } else {
+        document.getElementById("sunsetValue").textContent = "—";
+        document.getElementById("sunsetAmpm").textContent = "—";
+      }
+
+      // Theme + Meter
+      const level = levelFromPressure(pressure);
+      applyTheme(level);
+      setMeter(meterFromPressure(pressure));
+
+      // Optional: try nicer “Neighborhood, City” label
+      const better = await tryBetterCityLabel(lat, lon);
+      if (better) cityEl.textContent = better;
+    }
+
+    /* ---------- GET CURRENT LOCATION ---------- */
+    async function refreshFromCurrentLocation() {
+      const cityEl = document.getElementById("city");
+      cityEl.textContent = "Locating…";
+
+      if (!navigator.geolocation) {
+        cityEl.textContent = "Location off";
+        // fallback Vancouver coords
+        await getWeatherByCoords(49.2827, -123.1207);
+        return;
+      }
+
+      navigator.geolocation.getCurrentPosition(
+        async (pos) => {
+          const { latitude, longitude } = pos.coords;
+          await getWeatherByCoords(latitude, longitude);
+        },
+        async () => {
+          cityEl.textContent = "Location off";
+          await getWeatherByCoords(49.2827, -123.1207);
+        },
+        { enableHighAccuracy: true, timeout: 9000, maximumAge: 0 }
+      );
+    }
+
+    /* ---------- INIT ---------- */
+    window.addEventListener('DOMContentLoaded', async () => {
       applyTheme(1);
       setMeter(20);
 
-      const refresh = document.getElementById('refreshBtn');
-      if (refresh) refresh.addEventListener('click', getWeather);
+      document.getElementById('refreshBtn')?.addEventListener('click', refreshFromCurrentLocation);
 
-      getWeather();
+      await refreshFromCurrentLocation();
     });
   </script>
 </body>
