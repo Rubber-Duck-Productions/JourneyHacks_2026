@@ -1,6 +1,7 @@
 /* maps.js — Leaflet + demo OpenWeather integration */
 
 WEATHER_API_KEY = "736185ae3214d80248deba0bc59a9c16";
+
 const DEFAULT = { lat: 49.2827, lng: -123.1207 }; // Vancouver
 let map,
   marker,

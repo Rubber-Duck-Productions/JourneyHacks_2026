@@ -343,6 +343,90 @@
       document.head.appendChild(script);
     }
   </script>
+
+  <!-- API Keys Quick-Edit UI -->
+  <script>
+    // Render a small keys control in the panel for convenience (no persistence beyond sessionStorage)
+    function renderApiKeyControls() {
+      const panel = document.querySelector('.panel');
+      if (!panel || document.getElementById('api-key-controls')) return;
+
+      const container = document.createElement('div');
+      container.id = 'api-key-controls';
+      container.className = 'api-key-controls';
+      container.innerHTML = `
+        <div style="margin-top:6px;padding:8px;border-radius:8px;background:#f7f9fc;border:1px solid #eef3fb">
+          <div style="display:flex;gap:8px;flex-direction:column">
+            <label style="font-size:12px;color:#374151">Google Maps Key</label>
+            <input id="apiGoogleInput" placeholder="Paste Google Maps API key (session only)" style="padding:8px;border-radius:6px;border:1px solid #e6eef9" />
+            <label style="font-size:12px;color:#374151">OpenWeather Key</label>
+            <input id="apiWeatherInput" placeholder="OpenWeather API key" style="padding:8px;border-radius:6px;border:1px solid #e6eef9" />
+            <label style="font-size:12px;color:#374151">Gemini Key</label>
+            <input id="apiGeminiInput" placeholder="Gemini API key (optional)" style="padding:8px;border-radius:6px;border:1px solid #e6eef9" />
+            <div style="display:flex;gap:8px;margin-top:8px">
+              <button id="saveApiKeysBtn">Save & Apply (session)</button>
+              <button id="clearApiKeysBtn" style="background:#ef4444">Clear</button>
+              <button id="reloadPageBtn" style="background:#6b7280">Reload</button>
+            </div>
+            <div id="apiKeyStatus" style="font-size:12px;color:#6b7280;margin-top:6px"></div>
+          </div>
+        </div>
+      `;
+      panel.insertBefore(container, panel.firstChild);
+
+      // Fill inputs if we have session keys
+      try {
+        const g = sessionStorage.getItem('GOOGLE_MAPS_API_KEY') || '';
+        const w = sessionStorage.getItem('WEATHER_API_KEY') || '';
+        const gm = sessionStorage.getItem('GEMINI_API_KEY') || '';
+        document.getElementById('apiGoogleInput').value = g;
+        document.getElementById('apiWeatherInput').value = w;
+        document.getElementById('apiGeminiInput').value = gm;
+      } catch (e) {}
+
+      document.getElementById('saveApiKeysBtn').addEventListener('click', () => {
+        const g = document.getElementById('apiGoogleInput').value.trim();
+        const w = document.getElementById('apiWeatherInput').value.trim();
+        const gm = document.getElementById('apiGeminiInput').value.trim();
+        try {
+          if (g) sessionStorage.setItem('GOOGLE_MAPS_API_KEY', g);
+          else sessionStorage.removeItem('GOOGLE_MAPS_API_KEY');
+          if (w) sessionStorage.setItem('WEATHER_API_KEY', w);
+          else sessionStorage.removeItem('WEATHER_API_KEY');
+          if (gm) sessionStorage.setItem('GEMINI_API_KEY', gm);
+          else sessionStorage.removeItem('GEMINI_API_KEY');
+
+          // Apply to window for immediate use (maps.js may require reload for initial load)
+          window.GOOGLE_MAPS_API_KEY = g || undefined;
+          window.WEATHER_API_KEY = w || undefined;
+          window.GEMINI_API_KEY = gm || undefined;
+
+          const status = document.getElementById('apiKeyStatus');
+          status.textContent = 'Keys saved to session. For Maps JS to take effect, press Reload.';
+        } catch (e) {
+          console.warn('[index] Failed to save keys', e);
+        }
+      });
+
+      document.getElementById('clearApiKeysBtn').addEventListener('click', () => {
+        sessionStorage.removeItem('GOOGLE_MAPS_API_KEY');
+        sessionStorage.removeItem('WEATHER_API_KEY');
+        sessionStorage.removeItem('GEMINI_API_KEY');
+        window.GOOGLE_MAPS_API_KEY = undefined;
+        window.WEATHER_API_KEY = undefined;
+        window.GEMINI_API_KEY = undefined;
+        document.getElementById('apiGoogleInput').value = '';
+        document.getElementById('apiWeatherInput').value = '';
+        document.getElementById('apiGeminiInput').value = '';
+        document.getElementById('apiKeyStatus').textContent = 'Keys cleared from session.';
+      });
+
+      document.getElementById('reloadPageBtn').addEventListener('click', () => location.reload());
+    }
+
+    // Render controls after DOM is ready
+    window.addEventListener('DOMContentLoaded', () => setTimeout(renderApiKeyControls, 200));
+  </script>
   <script src="maps.js" defer></script>
   <script src="index.js" defer></script>
   <script src="activities.js" defer></script>
