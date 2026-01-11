@@ -40,30 +40,171 @@ const DEFAULT_SEARCH_RADIUS = 5000; // 5km
 // Increase this to open more popups automatically (e.g., 5 or 6)
 const AUTO_OPEN_POPUPS = 6;
 
+// Lightweight loader to prefer the Maps JS PlacesService (avoids REST CORS issues)
+let _activitiesPlacesService = null;
+let _activitiesPlacesLoader = null;
+
+function ensureActivitiesPlacesService(timeout = 8000) {
+  if (_activitiesPlacesService) return Promise.resolve(_activitiesPlacesService);
+  if (_activitiesPlacesLoader) return _activitiesPlacesLoader;
+
+  _activitiesPlacesLoader = new Promise((resolve) => {
+    const apiKey = window.GOOGLE_MAPS_API_KEY;
+
+    // If already available
+    if (window.google && google.maps && google.maps.places) {
+      try {
+        const root = document.getElementById('places-service-root') || document.createElement('div');
+        root.id = 'places-service-root';
+        root.style.display = 'none';
+        document.body.appendChild(root);
+        _activitiesPlacesService = new google.maps.places.PlacesService(root);
+        resolve(_activitiesPlacesService);
+        return;
+      } catch (e) {
+        console.warn('[activities] Existing google.places service create failed', e);
+      }
+    }
+
+    if (!apiKey || !apiKey.trim() || apiKey === 'AIzaSyDummyKey') {
+      resolve(null);
+      return;
+    }
+
+    const cbName = '__activities_places_loaded';
+    window[cbName] = () => {
+      try {
+        const root = document.getElementById('places-service-root') || document.createElement('div');
+        root.id = 'places-service-root';
+        root.style.display = 'none';
+        document.body.appendChild(root);
+        _activitiesPlacesService = new google.maps.places.PlacesService(root);
+        resolve(_activitiesPlacesService);
+      } catch (e) {
+        console.warn('[activities] PlacesService creation after load failed', e);
+        resolve(null);
+      } finally {
+        try { delete window[cbName]; } catch (e) {}
+      }
+    };
+
+    const script = document.createElement('script');
+    script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=places&callback=${cbName}`;
+    script.async = true;
+    script.defer = true;
+    script.onerror = () => {
+      console.warn('[activities] Loading Google Maps JS failed');
+      resolve(null);
+    };
+    document.head.appendChild(script);
+
+    setTimeout(() => { if (!_activitiesPlacesService) resolve(null); }, timeout);
+  });
+
+  return _activitiesPlacesLoader;
+}
+
 // Find nearby places using Google Maps Places API
 async function findNearbyPlaces(lat, lng, radius = DEFAULT_SEARCH_RADIUS) {
-  const apiKey = window.GOOGLE_MAPS_API_KEY;
-  
-  if (!apiKey || apiKey === 'AIzaSyDummyKey' || !apiKey.trim()) {
-    console.warn('[activities] No Google Maps API key provided, using demo activities');
-    const status = document.getElementById('statusNote');
-    if (status) status.textContent = 'No Google Maps key: showing demo activities.';
-    return getDemoActivities(lat, lng);
+  // Try JS API first
+  const svc = await ensureActivitiesPlacesService();
+  const statusEl = document.getElementById('statusNote');
+  if (svc) {
+    if (statusEl) statusEl.textContent = 'Using Google Places JS for live activity results.';
+
+    try {
+      const queries = [
+        'museums near me',
+        'libraries near me',
+        'indoor activities near me',
+        'cafes near me',
+        'movie theaters near me',
+        'shopping malls near me'
+      ];
+
+      const allResults = [];
+      for (const q of queries.slice(0, 4)) {
+        const req = { query: q, location: new google.maps.LatLng(lat, lng), radius };
+        const results = await new Promise((resolve) => {
+          svc.textSearch(req, (res, status) => {
+            if (status === google.maps.places.PlacesServiceStatus.OK && res) resolve(res);
+            else resolve([]);
+          });
+        });
+        allResults.push(...results);
+      }
+
+      if (allResults.length === 0) {
+        console.warn('[activities] JS Places returned no results, falling back to demo');
+        return getDemoActivities(lat, lng);
+      }
+
+      // normalize results to expected shape
+      const mapped = allResults.map(r => ({
+        ...r,
+        geometry: r.geometry && r.geometry.location ? { location: { lat: r.geometry.location.lat(), lng: r.geometry.location.lng() } } : r.geometry
+      }));
+
+      // take unique top 10
+      const unique = [];
+      const seen = new Set();
+      for (const p of mapped) {
+        if (!seen.has(p.place_id)) { seen.add(p.place_id); unique.push(p); }
+      }
+
+      // enrich details via JS API getDetails when possible (fetches real Google Maps reviews)
+      const picks = unique.slice(0, 10);
+      const enriched = await Promise.all(picks.map(async p => {
+        try {
+          return await new Promise((resolve) => {
+            svc.getDetails({ 
+              placeId: p.place_id, 
+              fields: [
+                'name',
+                'rating',
+                'user_ratings_total',
+                'reviews',
+                'formatted_address',
+                'geometry',
+                'place_id',
+                'vicinity',
+                'types',
+                'opening_hours',
+                'price_level',
+                'photos'
+              ] 
+            }, (res, status) => {
+              if (status === google.maps.places.PlacesServiceStatus.OK && res) {
+                // Merge with original, preserving real reviews
+                const merged = { ...p, ...res };
+                if (res.reviews && Array.isArray(res.reviews)) {
+                  merged.reviews = res.reviews; // Real Google Maps reviews
+                }
+                resolve(merged);
+              } else resolve(p);
+            });
+          });
+        } catch (e) {
+          return p;
+        }
+      }));
+
+      return enriched;
+    } catch (e) {
+      console.warn('[activities] JS Places path failed, falling back to REST/demo', e);
+      // continue to REST path below
+    }
+  } else {
+    if (statusEl) statusEl.textContent = 'Google Maps key detected; using REST Places (may be blocked by browser CORS).';
   }
 
-  // Rainy day activity types
-  const placeTypes = [
-    'museum',
-    'library',
-    'cafe',
-    'movie_theater',
-    'shopping_mall',
-    'aquarium',
-    'art_gallery',
-    'book_store',
-    'gym',
-    'bowling_alley'
-  ];
+  // REST fallback (existing behavior)
+  const apiKey = window.GOOGLE_MAPS_API_KEY;
+  if (!apiKey || apiKey === 'AIzaSyDummyKey' || !apiKey.trim()) {
+    console.warn('[activities] No Google Maps API key provided, using demo activities');
+    if (statusEl) statusEl.textContent = 'No Google Maps key: showing demo activities.';
+    return getDemoActivities(lat, lng);
+  }
 
   try {
     const allPlaces = [];
@@ -130,15 +271,27 @@ async function findNearbyPlaces(lat, lng, radius = DEFAULT_SEARCH_RADIUS) {
 
     const places = uniquePlaces.slice(0, 10); // Return top 10 places
     
-    // Fetch place details with reviews for each place (with error handling)
+    // Fetch place details with real Google Maps reviews for each place (with error handling)
     // Store original places to use as fallback
     const placesWithReviews = await Promise.allSettled(
       places.map(async (place, index) => {
         const originalPlace = place; // Store reference
+        // Skip demo places - they don't have real reviews
+        if (!place.place_id || place.place_id.startsWith('demo_')) {
+          return originalPlace;
+        }
         try {
           const details = await getPlaceDetails(place.place_id);
           if (details) {
-            return { ...place, reviews: details.reviews || [], user_ratings_total: details.user_ratings_total || place.user_ratings_total };
+            // Merge details, preserving real Google Maps reviews
+            const merged = { ...place, ...details };
+            if (details.reviews && Array.isArray(details.reviews)) {
+              merged.reviews = details.reviews; // Real Google Maps reviews
+            }
+            if (details.user_ratings_total) {
+              merged.user_ratings_total = details.user_ratings_total;
+            }
+            return merged;
           }
         } catch (err) {
           console.warn(`[activities] Error fetching details for ${place.name}:`, err);
@@ -164,30 +317,70 @@ async function findNearbyPlaces(lat, lng, radius = DEFAULT_SEARCH_RADIUS) {
   }
 }
 
-// Fetch place details including reviews
+// Fetch place details including reviews (prefer JS API)
+// This function fetches real Google Maps reviews
 async function getPlaceDetails(placeId) {
-  const apiKey = window.GOOGLE_MAPS_API_KEY;
-  
-  if (!apiKey || apiKey === 'AIzaSyDummyKey' || !apiKey.trim()) {
-    return null;
+  if (!placeId) return null;
+
+  const svc = await ensureActivitiesPlacesService();
+  if (svc) {
+    return new Promise((resolve) => {
+      // Request comprehensive fields including reviews for real Google Maps data
+      svc.getDetails({ 
+        placeId, 
+        fields: [
+          'name',
+          'rating',
+          'user_ratings_total',
+          'reviews',
+          'formatted_address',
+          'geometry',
+          'place_id',
+          'vicinity',
+          'types',
+          'opening_hours',
+          'price_level',
+          'photos'
+        ] 
+      }, (res, status) => {
+        if (status === google.maps.places.PlacesServiceStatus.OK && res) {
+          // Log when we get real reviews
+          if (res.reviews && Array.isArray(res.reviews)) {
+            console.log(`[activities] Fetched ${res.reviews.length} real reviews for ${res.name}`);
+          }
+          resolve(res);
+        } else {
+          console.warn('[activities] getDetails JS API failed', status);
+          resolve(null);
+        }
+      });
+    });
   }
 
+  // Fallback to REST
+  const apiKey = window.GOOGLE_MAPS_API_KEY;
+  if (!apiKey || apiKey === 'AIzaSyDummyKey' || !apiKey.trim()) return null;
+
   try {
-    const url = `https://maps.googleapis.com/maps/api/place/details/json?place_id=${placeId}&fields=name,rating,user_ratings_total,reviews,formatted_address&key=${apiKey}`;
+    // Request reviews field for real Google Maps reviews
+    const url = `https://maps.googleapis.com/maps/api/place/details/json?place_id=${placeId}&fields=name,rating,user_ratings_total,reviews,formatted_address,geometry,place_id,vicinity,types,opening_hours,price_level,photos&key=${apiKey}`;
     const response = await fetch(url);
-    
     if (!response.ok) {
+      console.warn('[activities] getPlaceDetails REST response not ok:', response.status);
       return null;
     }
-    
     const data = await response.json();
     if (data.status === 'OK' && data.result) {
+      // Log when we get real reviews
+      if (data.result.reviews && Array.isArray(data.result.reviews)) {
+        console.log(`[activities] Fetched ${data.result.reviews.length} real reviews for ${data.result.name} via REST`);
+      }
       return data.result;
     }
-    
+    console.warn('[activities] getPlaceDetails REST status not OK:', data.status);
     return null;
-  } catch (err) {
-    console.warn('[activities] Error fetching place details:', err);
+  } catch (e) {
+    console.warn('[activities] getPlaceDetails REST error', e);
     return null;
   }
 }

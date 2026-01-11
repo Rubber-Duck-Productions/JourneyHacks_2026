@@ -103,7 +103,7 @@ function updateWeatherUI(data) {
   document.getElementById("temp").textContent = `${temp}°C`;
   document.getElementById("desc").textContent = desc;
 
-  updateBackground(weatherId);
+  updateWeatherBackground(weatherId);
   updateMarker(
     data.coord?.lat || lastCoords.lat,
     data.coord?.lon || lastCoords.lon,
@@ -311,7 +311,7 @@ function tryAutoLocateOnLoad() {
 }
 
 // Simple mapping of weather id to body class for background style
-function updateBackground(weatherId) {
+function updateWeatherBackground(weatherId) {
   document.body.classList.remove(
     "weather-clear",
     "weather-clouds",
