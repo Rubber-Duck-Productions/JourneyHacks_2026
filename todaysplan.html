@@ -21,14 +21,12 @@
     .caps{letter-spacing:.22em;}
   </style>
 
-  
-    
-    <script>
-      window.GOOGLE_MAPS_API_KEY = "AIzaSyBLxPuSPPd9VsFhC6LOJdk_5dGwAQVIBAE"
-      window.GEMINI_API_KEY ="AIzaSyDJ5lYgcPICspOJIQxUeU7U7-RBbwmIlLk"; 
-    </script>
-
-    
+  <script>
+    // NOTE: Exposing keys client-side is not secure for production.
+    // For quick prototyping it works; for production use a server/proxy + restrict keys.
+    window.GOOGLE_MAPS_API_KEY = "AIzaSyBLxPuSPPd9VsFhC6LOJdk_5dGwAQVIBAE";
+    window.GEMINI_API_KEY = "AIzaSyDJ5lYgcPICspOJIQxUeU7U7-RBbwmIlLk"; // optional
+  </script>
 </head>
 
 <body class="min-h-screen bg-slate-950 text-slate-900">
@@ -49,7 +47,6 @@
       <div class="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div>
           <div class="flex items-center gap-2">
-            <!-- ✅ Back button added (same style as your other pills) -->
             <a href="./index.html"
                class="rounded-full bg-white/10 px-4 py-2 text-[12px] font-semibold text-white/80 hover:bg-white/15 active:bg-white/20 transition">
               ← Back
@@ -85,33 +82,6 @@
               type="button">
               Refresh plan
             </button>
-
-            <button id="testKeyBtn"
-              class="rounded-full bg-white/10 px-4 py-2 text-[12px] font-semibold text-white/80 hover:bg-white/15 active:bg-white/20 transition"
-              type="button">
-              Test API Key
-            </button>
-
-            <button id="apiKeyToggle"
-              class="rounded-full bg-white/10 px-3 py-1 text-[12px] font-semibold text-white/80 hover:bg-white/15 active:bg-white/20 transition"
-              type="button"
-            >
-              Manage Keys
-            </button>
-          </div>
-
-          <div id="apiKeyPanel" class="mt-3 px-3 py-3 rounded-lg bg-white/5 hidden">
-            <div class="flex flex-col gap-2">
-              <input id="apiGoogleInput" placeholder="Google Maps API key (session)" class="rounded-md p-2 bg-white/10" />
-              <input id="apiWeatherInput" placeholder="OpenWeather API key" class="rounded-md p-2 bg-white/10" />
-              <input id="apiGeminiInput" placeholder="Gemini API key (optional)" class="rounded-md p-2 bg-white/10" />
-              <div class="flex gap-2">
-                <button id="saveApiKeysBtn" class="rounded-full bg-white/10 px-3 py-1">Save & Apply</button>
-                <button id="clearApiKeysBtn" class="rounded-full bg-rose-600 px-3 py-1">Clear</button>
-                <button id="applyApiKeysBtn" class="rounded-full bg-white/10 px-3 py-1">Apply (no reload)</button>
-              </div>
-              <div id="apiKeyStatus" class="text-[11px] text-white/50"></div>
-            </div>
           </div>
 
           <div id="statusNote" class="text-[10px] text-white/45 sm:text-right max-w-[320px]">
@@ -205,7 +175,9 @@
 
   <script>
     /* --------------------------------------------
-       activities.js — (adapted) core logic reuse
+       Core logic (with refresh producing new curation)
+       - "Use my location" kept as-is
+       - Removed Test API + Manage Keys UI/logic
     -------------------------------------------- */
 
     let currentUserLocation = null;
@@ -302,18 +274,22 @@
       const svc = await ensurePlacesService();
       if (svc) {
         return new Promise((resolve) => {
-          svc.getDetails({ placeId, fields: ['name', 'rating', 'user_ratings_total', 'reviews', 'formatted_address', 'geometry', 'place_id'] }, (res, status) => {
-            if (status === google.maps.places.PlacesServiceStatus.OK && res) resolve(res);
-            else resolve(null);
-          });
+          svc.getDetails(
+            { placeId, fields: ['name', 'rating', 'user_ratings_total', 'reviews', 'formatted_address', 'geometry', 'place_id', 'vicinity'] },
+            (res, status) => {
+              if (status === google.maps.places.PlacesServiceStatus.OK && res) resolve(res);
+              else resolve(null);
+            }
+          );
         });
       }
 
+      // REST fallback is usually blocked by browser CORS; keep as best-effort
       const apiKey = window.GOOGLE_MAPS_API_KEY;
       if (!apiKey || !apiKey.trim() || apiKey === 'AIzaSyDummyKey') return null;
 
       try {
-        const url = `https://maps.googleapis.com/maps/api/place/details/json?place_id=${placeId}&fields=name,rating,user_ratings_total,reviews,formatted_address,geometry,place_id&key=${apiKey}`;
+        const url = `https://maps.googleapis.com/maps/api/place/details/json?place_id=${placeId}&fields=name,rating,user_ratings_total,reviews,formatted_address,geometry,place_id,vicinity&key=${apiKey}`;
         const response = await fetch(url);
         if (!response.ok) return null;
         const data = await response.json();
@@ -339,12 +315,14 @@
               }));
               resolve({ status: 'OK', results: mapped });
             } else {
+              console.warn('[plan] textSearch failed', status);
               resolve({ status: 'ERROR' });
             }
           });
         });
       }
 
+      // REST fallback (likely CORS blocked)
       const apiKey = window.GOOGLE_MAPS_API_KEY;
       if (!apiKey || !apiKey.trim() || apiKey === 'AIzaSyDummyKey') return null;
 
@@ -549,33 +527,6 @@
       if (cityEl) cityEl.textContent = city;
     }
 
-    async function testAPIKey() {
-      const key =
-        window.WEATHER_API_KEY && window.WEATHER_API_KEY.trim()
-          ? window.WEATHER_API_KEY
-          : window.INDEX_API_KEY && window.INDEX_API_KEY.trim()
-          ? window.INDEX_API_KEY
-          : null;
-      const note = document.getElementById('keyNote');
-      if (!key) { if (note) note.textContent = 'No API key set.'; return; }
-
-      const testUrl = `https://api.openweathermap.org/data/2.5/weather?q=London&units=metric&appid=${key}`;
-      try {
-        const res = await fetch(testUrl);
-        const txt = await res.text().catch(() => "");
-        if (!res.ok) {
-          if (note) note.textContent = (res.status === 401 || res.status === 403)
-            ? 'API key invalid or unauthorized (401/403).'
-            : (res.status === 429) ? 'Rate limit exceeded (429).' : `Test failed (status ${res.status}).`;
-          return;
-        }
-        const data = JSON.parse(txt || "{}");
-        if (note) note.textContent = `API key OK — sample: ${data.name || 'Unknown'}, ${Math.round(data.main?.temp || 0)}°C`;
-      } catch {
-        if (note) note.textContent = 'Network error while testing API key';
-      }
-    }
-
     function tryAutoLocateOnLoad() {
       const status = document.getElementById('statusNote');
       if (!navigator.geolocation) {
@@ -599,19 +550,48 @@
       );
     }
 
+    /* --------------------------------------------
+       ✅ Refresh = NEW curation helpers
+    -------------------------------------------- */
+    function makeNonce() {
+      return `nonce_${Date.now()}_${Math.random().toString(16).slice(2)}`;
+    }
+
+    function dedupe(list) {
+      const seen = new Set();
+      const out = [];
+      for (const p of (list || [])) {
+        const id = p.place_id || p.placeId || p.id || `${p.name}|${p.formatted_address || p.vicinity || ""}`;
+        if (seen.has(id)) continue;
+        seen.add(id);
+        out.push(p);
+      }
+      return out;
+    }
+
+    function shuffle(arr) {
+      const a = [...(arr || [])];
+      for (let i = a.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [a[i], a[j]] = [a[j], a[i]];
+      }
+      return a;
+    }
+
     async function curatePlan() {
       const userLat = currentUserLocation?.lat ?? 49.2827;
       const userLng = currentUserLocation?.lng ?? -123.1207;
 
-      setList("cafeState", "cafeList",   { loading: true, userLat, userLng });
+      setList("cafeState", "cafeList",    { loading: true, userLat, userLng });
       setList("dinnerState", "dinnerList",{ loading: true, userLat, userLng });
-      setList("relaxState", "relaxList", { loading: true, userLat, userLng });
+      setList("relaxState", "relaxList",  { loading: true, userLat, userLng });
 
       const status = document.getElementById("statusNote");
 
-      const qCafe  = "specialty coffee cafe near me";
-      const qDinner= "dinner restaurant hearty meal near me";
-      const qRelax = "cocktail bar OR vinyl shop OR candle store OR library near me";
+      const nonce = makeNonce();
+      const qCafe   = `specialty coffee cafe near me ${nonce}`;
+      const qDinner = `hearty dinner restaurant near me ${nonce}`;
+      const qRelax  = `cocktail bar OR vinyl shop OR candle store OR library near me ${nonce}`;
 
       const [cafeRes, dinnerRes, relaxRes] = await Promise.allSettled([
         textSearch(qCafe, userLat, userLng),
@@ -620,20 +600,30 @@
       ]);
 
       const anyBad =
-        [cafeRes, dinnerRes, relaxRes].some(r => r.status !== "fulfilled" || !r.value || r.value.status === "ERROR" || r.value.status === "REQUEST_DENIED");
+        [cafeRes, dinnerRes, relaxRes].some(r =>
+          r.status !== "fulfilled" ||
+          !r.value ||
+          r.value.status === "ERROR" ||
+          r.value.status === "REQUEST_DENIED"
+        );
 
       if (anyBad) {
-        if (status) status.textContent = "Showing demo picks (browser CORS / key / Places REST). For production, call Places from a server/proxy.";
+        if (status) status.textContent =
+          "Showing demo picks (Places JS not loaded / blocked). Ensure Places API is enabled and key referrer allowed.";
         const demo = getDemoPlan(userLat, userLng);
-        setList("cafeState", "cafeList",   { places: demo.cafe.slice(0,3), userLat, userLng });
-        setList("dinnerState", "dinnerList",{ places: demo.dinner.slice(0,3), userLat, userLng });
-        setList("relaxState", "relaxList", { places: demo.relax.slice(0,3), userLat, userLng });
+        setList("cafeState", "cafeList",     { places: demo.cafe.slice(0,3), userLat, userLng });
+        setList("dinnerState", "dinnerList", { places: demo.dinner.slice(0,3), userLat, userLng });
+        setList("relaxState", "relaxList",   { places: demo.relax.slice(0,3), userLat, userLng });
         return;
       }
 
-      const cafePlaces   = (cafeRes.value.results || []).slice(0, 6);
-      const dinnerPlaces = (dinnerRes.value.results || []).slice(0, 6);
-      const relaxPlaces  = (relaxRes.value.results || []).slice(0, 8);
+      let cafePlaces   = dedupe((cafeRes.value.results || []).slice(0, 12));
+      let dinnerPlaces = dedupe((dinnerRes.value.results || []).slice(0, 12));
+      let relaxPlaces  = dedupe((relaxRes.value.results || []).slice(0, 16));
+
+      cafePlaces = shuffle(cafePlaces);
+      dinnerPlaces = shuffle(dinnerPlaces);
+      relaxPlaces = shuffle(relaxPlaces);
 
       async function enrich(list) {
         const picks = list.slice(0, 4);
@@ -654,12 +644,16 @@
       const dinners = (dinnerEn.status === "fulfilled" ? dinnerEn.value : dinnerPlaces).slice(0,3);
       const relaxes = (relaxEn.status === "fulfilled" ? relaxEn.value : relaxPlaces).slice(0,3);
 
-      if (status) status.textContent = "Plan curated from Places results (best-effort).";
-      setList("cafeState", "cafeList",   { places: cafes, userLat, userLng });
-      setList("dinnerState", "dinnerList",{ places: dinners, userLat, userLng });
-      setList("relaxState", "relaxList", { places: relaxes, userLat, userLng });
+      if (status) status.textContent = "Plan refreshed — curated from Places results.";
+      setList("cafeState", "cafeList",     { places: cafes, userLat, userLng });
+      setList("dinnerState", "dinnerList", { places: dinners, userLat, userLng });
+      setList("relaxState", "relaxList",   { places: relaxes, userLat, userLng });
     }
 
+    /* --------------------------------------------
+       Location controls
+       ✅ DO NOT CHANGE (kept as-is from your file)
+    -------------------------------------------- */
     async function useMyLocation() {
       const status = document.getElementById("statusNote");
       if (!navigator.geolocation) {
@@ -689,97 +683,17 @@
       );
     }
 
+    /* --------------------------------------------
+       Init
+    -------------------------------------------- */
     window.addEventListener("DOMContentLoaded", () => {
       document.getElementById("useLocationBtn").addEventListener("click", useMyLocation);
+
+      // ✅ Refresh buttons = new curation every time
       document.getElementById("refreshAllBtn").addEventListener("click", curatePlan);
       document.getElementById("refreshCafe").addEventListener("click", curatePlan);
       document.getElementById("refreshDinner").addEventListener("click", curatePlan);
       document.getElementById("refreshRelax").addEventListener("click", curatePlan);
-
-      const testBtn = document.getElementById('testKeyBtn');
-      if (testBtn) testBtn.addEventListener('click', testAPIKey);
-
-      // API key panel behavior
-      const toggle = document.getElementById('apiKeyToggle');
-      const panel = document.getElementById('apiKeyPanel');
-      const saveBtn = document.getElementById('saveApiKeysBtn');
-      const clearBtn = document.getElementById('clearApiKeysBtn');
-      const applyBtn = document.getElementById('applyApiKeysBtn');
-
-      function loadSessionKeysIntoInputs() {
-        try {
-          document.getElementById('apiGoogleInput').value = sessionStorage.getItem('GOOGLE_MAPS_API_KEY') || '';
-          document.getElementById('apiWeatherInput').value = sessionStorage.getItem('WEATHER_API_KEY') || '';
-          document.getElementById('apiGeminiInput').value = sessionStorage.getItem('GEMINI_API_KEY') || '';
-        } catch (e) {}
-      }
-
-      if (toggle && panel) {
-        toggle.addEventListener('click', () => {
-          panel.classList.toggle('hidden');
-          if (!panel.classList.contains('hidden')) loadSessionKeysIntoInputs();
-        });
-      }
-
-      if (saveBtn) {
-        saveBtn.addEventListener('click', () => {
-          const g = document.getElementById('apiGoogleInput').value.trim();
-          const w = document.getElementById('apiWeatherInput').value.trim();
-          const gm = document.getElementById('apiGeminiInput').value.trim();
-          try {
-            if (g) sessionStorage.setItem('GOOGLE_MAPS_API_KEY', g); else sessionStorage.removeItem('GOOGLE_MAPS_API_KEY');
-            if (w) sessionStorage.setItem('WEATHER_API_KEY', w); else sessionStorage.removeItem('WEATHER_API_KEY');
-            if (gm) sessionStorage.setItem('GEMINI_API_KEY', gm); else sessionStorage.removeItem('GEMINI_API_KEY');
-
-            // apply immediately
-            window.GOOGLE_MAPS_API_KEY = g || undefined;
-            window.WEATHER_API_KEY = w || undefined;
-            window.GEMINI_API_KEY = gm || undefined;
-
-            document.getElementById('apiKeyStatus').textContent = 'Keys saved to session and applied';
-          } catch (e) {
-            console.warn('[plan] Failed to save keys', e);
-            document.getElementById('apiKeyStatus').textContent = 'Failed to save keys (see console)';
-          }
-        });
-      }
-
-      if (applyBtn) {
-        applyBtn.addEventListener('click', async () => {
-          const g = document.getElementById('apiGoogleInput').value.trim();
-          const w = document.getElementById('apiWeatherInput').value.trim();
-          const gm = document.getElementById('apiGeminiInput').value.trim();
-          window.GOOGLE_MAPS_API_KEY = g || undefined;
-          window.WEATHER_API_KEY = w || undefined;
-          window.GEMINI_API_KEY = gm || undefined;
-          try {
-            if (g) {
-              const svc = await ensurePlacesService();
-              document.getElementById('apiKeyStatus').textContent = svc ? 'Google Places JS loaded' : 'Google key applied but JS failed to load';
-            }
-            if (w) {
-              // test weather key quickly
-              await testAPIKey();
-            }
-          } catch (e) {
-            console.warn('[plan] Apply keys error', e);
-            document.getElementById('apiKeyStatus').textContent = 'Applied but encountered an error (see console)';
-          }
-        });
-      }
-
-      if (clearBtn) {
-        clearBtn.addEventListener('click', () => {
-          sessionStorage.removeItem('GOOGLE_MAPS_API_KEY');
-          sessionStorage.removeItem('WEATHER_API_KEY');
-          sessionStorage.removeItem('GEMINI_API_KEY');
-          window.GOOGLE_MAPS_API_KEY = undefined;
-          window.WEATHER_API_KEY = undefined;
-          window.GEMINI_API_KEY = undefined;
-          document.getElementById('apiKeyStatus').textContent = 'Keys cleared from session';
-          loadSessionKeysIntoInputs();
-        });
-      }
 
       // default load (Vancouver fallback)
       currentUserLocation = { lat: 49.2827, lng: -123.1207 };
