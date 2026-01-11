@@ -1,5 +1,4 @@
-/* activities.js — Rainy Day Activities using Google Maps Places API and Gemini */
-// Note: do NOT hard-code API keys in source files. Set keys on the page as:
+
 GOOGLE_MAPS_API_KEY = "AIzaSyBLxPuSPPd9VsFhC6LOJdk_5dGwAQVIBAE";
 GEMINI_API_KEY = "AIzaSyDJ5lYgcPICspOJIQxUeU7U7-RBbwmIlLk";
 
@@ -903,6 +902,9 @@ function initActivities() {
     findBtn.addEventListener('click', findActivities);
   }
 
+  // Expose findActivities globally so other modules (e.g., maps.js) can trigger it
+  try { window.findActivities = findActivities; } catch (e) { console.warn('[activities] Could not expose findActivities globally', e); }
+
   // Initialize current location from map if available
   if (window.lastCoords) {
     currentUserLocation = window.lastCoords;
@@ -937,6 +939,19 @@ function initActivities() {
   if (descEl) {
     observer.observe(descEl, { childList: true, characterData: true, subtree: true });
   }
+
+  // React to global user-location events so activities update automatically
+  window.addEventListener('user-location', (e) => {
+    try {
+      const normalized = normalizeLocation(e.detail);
+      if (normalized) currentUserLocation = normalized;
+      else currentUserLocation = e.detail;
+      // Slight delay to allow other init steps to complete
+      setTimeout(() => { if (window.findActivities) { try { window.findActivities(); } catch(err){ console.warn('[activities] findActivities failed on user-location event', err); } } }, 120);
+    } catch (err) {
+      console.warn('[activities] user-location handler error', err);
+    }
+  });
 }
 
 // Show summary notification when activities are found

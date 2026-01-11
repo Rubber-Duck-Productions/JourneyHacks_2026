@@ -164,7 +164,10 @@ function initUI() {
           const arr = await geo.json();
           if (arr && arr.length) {
             const { lat, lon, name } = arr[0];
-            getWeatherByCoords(lat, lon);
+            await getWeatherByCoords(lat, lon);
+            if (window.findActivities) {
+              try { window.findActivities(); } catch (err) { console.warn('[maps] findActivities call failed after search', err); }
+            }
           } else {
             showError("Location not found");
           }
@@ -198,16 +201,31 @@ function initUI() {
       return;
     }
     navigator.geolocation.getCurrentPosition(
-      (pos) => {
+      async (pos) => {
         const { latitude: lat, longitude: lon } = pos.coords;
-        getWeatherByCoords(lat, lon);
+        // Wait for the weather/map update, then trigger activities lookup if available
+        try {
+          await getWeatherByCoords(lat, lon);
+        } catch (e) {
+          console.warn('[maps] getWeatherByCoords failed during locate flow', e);
+        }
+        if (window.findActivities) {
+          try { window.findActivities(); } catch (err) { console.warn('[maps] findActivities failed', err); }
+        }
       },
       () => showError("Unable to get your location")
     );
   });
 
-  document.getElementById("refreshBtn").addEventListener("click", () => {
-    getWeatherByCoords(lastCoords.lat, lastCoords.lon);
+  document.getElementById("refreshBtn").addEventListener("click", async () => {
+    try {
+      await getWeatherByCoords(lastCoords.lat, lastCoords.lon);
+      if (window.findActivities) {
+        try { window.findActivities(); } catch (err) { console.warn('[maps] findActivities call failed after refresh', err); }
+      }
+    } catch (e) {
+      console.warn('[maps] refresh getWeatherByCoords failed', e);
+    }
   });
 
   const testBtn = document.getElementById("testKeyBtn");
@@ -283,11 +301,18 @@ function tryAutoLocateOnLoad() {
 
   const geoOptions = { timeout: 10000, maximumAge: 0 };
   navigator.geolocation.getCurrentPosition(
-    (pos) => {
+    async (pos) => {
       const { latitude: lat, longitude: lon } = pos.coords;
       console.info("[maps] Located user", lat, lon);
       if (status) status.textContent = "Using your location";
-      getWeatherByCoords(lat, lon);
+      try {
+        await getWeatherByCoords(lat, lon);
+      } catch (e) {
+        console.warn('[maps] getWeatherByCoords failed during auto-locate', e);
+      }
+      if (window.findActivities) {
+        try { window.findActivities(); } catch (err) { console.warn('[maps] findActivities failed', err); }
+      }
     },
     (err) => {
       console.warn("[maps] Geolocation failed", err);

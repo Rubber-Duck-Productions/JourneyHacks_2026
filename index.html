@@ -426,6 +426,114 @@
 
     // Render controls after DOM is ready
     window.addEventListener('DOMContentLoaded', () => setTimeout(renderApiKeyControls, 200));
+
+    /* --------------------------------------------
+       Curated plan integration (re-uses Places & Details logic)
+       Populates the existing #activities-list with cafe/dinner/relax picks
+    -------------------------------------------- */
+    function placeToCard(place, userLat, userLng) {
+      const lat = Number(place?.geometry?.location?.lat);
+      const lng = Number(place?.geometry?.location?.lng ?? place?.geometry?.location?.lon);
+
+      const distance = (isFinite(lat) && isFinite(lng))
+        ? (function() { const R = 6371; const dLat = (lat - userLat) * Math.PI/180; const dLon = (lng - userLng) * Math.PI/180; const a = Math.sin(dLat/2)**2 + Math.cos(userLat * Math.PI/180) * Math.cos(lat * Math.PI/180) * Math.sin(dLon/2)**2; const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a)); return R * c; })()
+        : null;
+
+      const rating = place.rating != null ? Number(place.rating).toFixed(1) : "—";
+      const total = place.user_ratings_total != null ? place.user_ratings_total : "";
+      const address = place.formatted_address || place.vicinity || "";
+      const topReview = (place.reviews && place.reviews[0] && place.reviews[0].text) ? place.reviews[0] : null;
+
+      const mapsUrl = place.place_id
+        ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(place.name || "place")}&query_place_id=${encodeURIComponent(place.place_id)}`
+        : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(place.name || "place")}`;
+
+      return `
+        <div class="rounded-[12px] bg-white/45 ring-1 ring-black/10 p-3">
+          <div class="flex items-start justify-between gap-3">
+            <div class="min-w-0">
+              <div class="text-[13px] font-extrabold tracking-tight text-slate-950 truncate">${(place.name || 'Untitled')}</div>
+              <div class="mt-1 flex items-center gap-2 text-[11px] text-slate-700/70">
+                <span class="font-semibold text-slate-900/70">★ ${rating}${total ? ` (${total})` : ''}</span>
+                ${distance != null ? `<span class="text-slate-700/50">•</span><span>${(distance < 1 ? Math.round(distance*1000)+'m' : distance.toFixed(1)+'km')}</span>` : ''}
+              </div>
+              ${address ? `<div class="mt-2 text-[11px] text-slate-700/65">${address}</div>` : ''}
+              ${topReview ? `<div class="mt-2 text-[11px] text-slate-800/80">“${(topReview.text||'').slice(0,140)}${topReview.text && topReview.text.length>140?'…':''}”</div>` : ''}
+            </div>
+            <a class="shrink-0 rounded-full bg-black/10 px-3 py-1 text-[11px] font-semibold text-slate-800/80 hover:bg-black/15 active:bg-black/20 transition" href="${mapsUrl}" target="_blank" rel="noreferrer">Maps</a>
+          </div>
+        </div>
+      `;
+    }
+
+    async function curatePlanIndex() {
+      const listEl = document.getElementById('activities-list');
+      const loading = document.getElementById('activities-loading');
+      const status = document.getElementById('statusNote');
+      const user = window.lastCoords || { lat: 49.2827, lng: -123.1207 };
+      loading.style.display = 'block';
+      listEl.innerHTML = '';
+      if (status) status.textContent = 'Curating activities…';
+
+      try {
+        // Use the activities.js findNearbyPlaces (JS/REST/demo fallback) to get a broad pool
+        const pool = await findNearbyPlaces(user.lat, user.lng, DEFAULT_SEARCH_RADIUS) || [];
+        const seen = new Set();
+        const unique = [];
+        for (const p of pool) {
+          if (!p || !p.place_id) continue;
+          if (!seen.has(p.place_id)) { seen.add(p.place_id); unique.push(p); }
+        }
+
+        if (unique.length === 0) {
+          const demo = (typeof getDemoActivities === 'function') ? getDemoActivities(user.lat, user.lng) : [];
+          listEl.innerHTML = demo.map(p => placeToCard(p, user.lat, user.lng)).join('');
+          if (status) status.textContent = 'Showing demo activities (Places not available).';
+          return;
+        }
+
+        // Categorize by simple heuristics (type names or keywords)
+        const cafes = unique.filter(p => (p.types || []).some(t => /cafe|coffee|bakery|barista|espresso/.test(t))).slice(0,3);
+        const dinners = unique.filter(p => (p.types || []).some(t => /restaurant|food|diner|bar/.test(t))).slice(0,3);
+        const relax = unique.filter(p => (p.types || []).some(t => /bar|library|museum|store|book_store|art_gallery/.test(t))).slice(0,3);
+
+        const picks = [...cafes, ...dinners, ...relax].slice(0,9);
+
+        // Enrich top picks with details
+        const enriched = await Promise.all(picks.map(async p => {
+          try { const d = await getPlaceDetails(p.place_id); return d ? { ...p, ...d } : p; } catch(e){ return p; }
+        }));
+
+        listEl.innerHTML = enriched.map(p => placeToCard(p, user.lat, user.lng)).join('');
+        if (status) status.textContent = `Curated ${enriched.length} activities from Places`;
+      } catch (err) {
+        console.warn('[index] curatePlanIndex failed', err);
+        const demo = (typeof getDemoActivities === 'function') ? getDemoActivities(user.lat, user.lng) : [];
+        listEl.innerHTML = demo.map(p => placeToCard(p, user.lat, user.lng)).join('');
+        if (status) status.textContent = 'Error curating (see console); showing demo activities.';
+      } finally {
+        loading.style.display = 'none';
+      }
+    }
+  </script>
+  <script>
+    // Wire up curated plan triggers
+    document.addEventListener('DOMContentLoaded', () => {
+      const refreshBtn = document.getElementById('refreshBtn');
+      if (refreshBtn) refreshBtn.addEventListener('click', () => setTimeout(curatePlanIndex, 50));
+
+      window.addEventListener('user-location', (e) => {
+        try { window.lastCoords = { lat: e.detail.lat, lng: e.detail.lng }; } catch (err) {}
+        setTimeout(curatePlanIndex, 200);
+        // Also trigger the activities search after the location is set (short delay to allow scripts to initialize)
+        setTimeout(() => {
+          try { if (window.findActivities) window.findActivities(); } catch (err) { console.warn('[index] findActivities call failed', err); }
+        }, 300);
+      });
+
+      // Run once on load after a short delay to allow auto-locate to complete
+      setTimeout(() => { try { curatePlanIndex(); } catch(e){} }, 2000);
+    });
   </script>
   <script src="maps.js" defer></script>
   <script src="index.js" defer></script>
