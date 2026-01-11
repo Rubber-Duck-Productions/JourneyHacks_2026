@@ -8,6 +8,15 @@ GEMINI_API_KEY = "AIzaSyDJ5lYgcPICspOJIQxUeU7U7-RBbwmIlLk";
 let activitiesMarkers = [];
 let currentUserLocation = null;
 
+// Normalize different coordinate shapes into { lat, lng } with numeric values
+function normalizeLocation(loc) {
+  if (!loc) return null;
+  const lat = Number(loc.lat ?? loc.latitude ?? loc.lat_n ?? NaN);
+  const lng = Number(loc.lng ?? loc.lon ?? loc.longitude ?? loc.lng_n ?? NaN);
+  if (!isFinite(lat) || !isFinite(lng)) return null;
+  return { lat, lng };
+}
+
 // Calculate distance between two coordinates using Haversine formula
 function calculateDistance(lat1, lon1, lat2, lon2) {
   const R = 6371; // Earth's radius in km
@@ -571,13 +580,24 @@ function createPopupContent(place, distance, suggestion = null) {
 
 // Display activities on the map and in the list
 function displayActivities(places, userLat, userLng, suggestions = null) {
+  // Normalize and validate provided user coordinates
+  const userCoords = normalizeLocation({ lat: userLat, lng: userLng }) || normalizeLocation(currentUserLocation);
+  if (!userCoords) {
+    console.warn('[activities] Invalid user coordinates provided to displayActivities', { userLat, userLng, currentUserLocation });
+    const activitiesList = document.getElementById('activities-list');
+    if (activitiesList) activitiesList.innerHTML = '<p class="error">Invalid user coordinates. Please set your location.</p>';
+    return;
+  }
+  const uLat = userCoords.lat;
+  const uLng = userCoords.lng;
+
   // Check if map is initialized
   if (!window.map) {
     console.warn('[activities] Map not initialized, waiting...');
     // Try to wait a bit and retry
     setTimeout(() => {
       if (window.map) {
-        displayActivities(places, userLat, userLng, suggestions);
+        displayActivities(places, uLat, uLng, suggestions);
       } else {
         throw new Error('Map not initialized. Please wait for the map to load.');
       }
@@ -597,8 +617,12 @@ function displayActivities(places, userLat, userLng, suggestions = null) {
   
   // Clear existing markers
   activitiesMarkers.forEach(marker => {
-    if (window.map && window.map.hasLayer(marker)) {
-      window.map.removeLayer(marker);
+    try {
+      if (window.map && window.map.hasLayer(marker)) {
+        window.map.removeLayer(marker);
+      }
+    } catch (err) {
+      console.warn('[activities] Error removing existing marker', err);
     }
   });
   activitiesMarkers = [];
@@ -608,9 +632,9 @@ function displayActivities(places, userLat, userLng, suggestions = null) {
 
   // Filter out places with invalid coordinates (prevent Leaflet errors)
   let filteredPlaces = places.filter(place => {
-    const lat = Number(place?.geometry?.location?.lat);
+    const lat = Number(place?.geometry?.location?.lat ?? place?.geometry?.location?.lat);
     // Some APIs use 'lng' or 'lon'
-    const lng = Number(place?.geometry?.location?.lng ?? place?.geometry?.location?.lon);
+    const lng = Number(place?.geometry?.location?.lng ?? place?.geometry?.location?.lon ?? place?.geometry?.location?.lon);
     if (!isFinite(lat) || !isFinite(lng)) {
       console.warn('[activities] Skipping place with invalid coordinates:', place.name || place.place_id, place.geometry);
       return false;
@@ -620,16 +644,19 @@ function displayActivities(places, userLat, userLng, suggestions = null) {
 
   if (filteredPlaces.length === 0) {
     console.warn('[activities] No valid place coordinates found; using demo activities');
-    filteredPlaces = getDemoActivities(userLat, userLng);
+    filteredPlaces = getDemoActivities(uLat, uLng);
   }
 
-  // Sort places by distance
+  // Remove any remaining entries where conversion produced NaN and compute distances
   const placesWithDistance = filteredPlaces.map(place => {
     const placeLat = Number(place.geometry.location.lat);
     const placeLng = Number(place.geometry.location.lng ?? place.geometry.location.lon);
-    const distance = calculateDistance(userLat, userLng, placeLat, placeLng);
-    return { ...place, distance };
-  }).sort((a, b) => a.distance - b.distance);
+    if (!isFinite(placeLat) || !isFinite(placeLng)) {
+      return null; // will be filtered out
+    }
+    const distance = calculateDistance(uLat, uLng, placeLat, placeLng);
+    return { ...place, distance, _placeLat: placeLat, _placeLng: placeLng };
+  }).filter(p => p !== null).sort((a, b) => a.distance - b.distance);
 
   // Update distance display with nearest activity (always show the closest)
   if (placesWithDistance.length > 0) {
@@ -652,36 +679,44 @@ function displayActivities(places, userLat, userLng, suggestions = null) {
 
   // Create markers and list items
   placesWithDistance.forEach((place, index) => {
-    const placeLat = place.geometry.location.lat;
-    const placeLng = place.geometry.location.lng;
+    const placeLat = place._placeLat ?? Number(place.geometry.location.lat);
+    const placeLng = place._placeLng ?? Number(place.geometry.location.lng ?? place.geometry.location.lon);
 
-    // Add marker to map with enhanced popup
+    // Add marker to map with enhanced popup (guarded)
+    let marker = null;
     if (window.map) {
-      const marker = L.marker([placeLat, placeLng], {
-        icon: L.divIcon({
-          className: 'activity-marker',
-          html: `<div style="background: #0077cc; color: white; border-radius: 50%; width: 30px; height: 30px; display: flex; align-items: center; justify-content: center; font-weight: bold; border: 2px solid white; box-shadow: 0 2px 4px rgba(0,0,0,0.3);">${index + 1}</div>`,
-          iconSize: [30, 30],
-          iconAnchor: [15, 15]
-        })
-      }).addTo(window.map);
-      
-      // Create enhanced popup content
-      const popupContent = createPopupContent(place, place.distance, suggestions ? suggestions[index] : null);
-      
-      marker.bindPopup(popupContent, {
-        maxWidth: 300,
-        className: 'activity-popup'
-      });
-      
-      // Auto-open popup for the first few activities (configurable)
-      if (index < AUTO_OPEN_POPUPS) {
-        setTimeout(() => {
-          marker.openPopup();
-        }, index * 500); // Stagger the popups
+      try {
+        marker = L.marker([placeLat, placeLng], {
+          icon: L.divIcon({
+            className: 'activity-marker',
+            html: `<div style="background: #0077cc; color: white; border-radius: 50%; width: 30px; height: 30px; display: flex; align-items: center; justify-content: center; font-weight: bold; border: 2px solid white; box-shadow: 0 2px 4px rgba(0,0,0,0.3);">${index + 1}</div>`,
+            iconSize: [30, 30],
+            iconAnchor: [15, 15]
+          })
+        }).addTo(window.map);
+
+        // Create enhanced popup content
+        const popupContent = createPopupContent(place, place.distance, suggestions ? suggestions[index] : null);
+
+        marker.bindPopup(popupContent, {
+          maxWidth: 300,
+          className: 'activity-popup'
+        });
+
+        // Auto-open popup for the first few activities (configurable)
+        if (index < AUTO_OPEN_POPUPS) {
+          setTimeout(() => {
+            try { marker.openPopup(); } catch (e) { /* ignore */ }
+          }, index * 500); // Stagger the popups
+        }
+
+        // Tag marker with place id for list-item lookups
+        marker._placeId = place.place_id || place._generatedId || `marker_${index}_${Date.now()}`;
+        activitiesMarkers.push(marker);
+      } catch (err) {
+        console.warn('[activities] Failed to create marker for place', place.name || place.place_id, err);
+        marker = null;
       }
-      
-      activitiesMarkers.push(marker);
     }
 
     // Create list item
@@ -712,8 +747,15 @@ function displayActivities(places, userLat, userLng, suggestions = null) {
     
     item.addEventListener('click', () => {
       if (window.map) {
-        window.map.setView([placeLat, placeLng], 15);
-        activitiesMarkers[index].openPopup();
+        try {
+          window.map.setView([placeLat, placeLng], 15);
+          // Find the marker by place id
+          const pid = place.place_id || place._generatedId || `marker_${index}_${Date.now()}`;
+          const found = activitiesMarkers.find(m => m && m._placeId === pid);
+          if (found) found.openPopup();
+        } catch (e) {
+          console.warn('[activities] Failed to zoom/open popup for place', place.name, e);
+        }
       }
     });
 
@@ -734,10 +776,17 @@ async function findActivities() {
   // Debugging: log current pointers
   console.debug('[activities] findActivities invoked. currentUserLocation:', currentUserLocation, 'window.lastCoords:', window.lastCoords);
 
-  // Get current location from map or stored location
+  // Get current location from map or stored location and normalize it (handles lon/lng variants)
   if (window.lastCoords && (!currentUserLocation || !currentUserLocation.lat)) {
-    currentUserLocation = window.lastCoords;
-    console.debug('[activities] currentUserLocation set from window.lastCoords', currentUserLocation);
+    const normalized = normalizeLocation(window.lastCoords);
+    if (normalized) {
+      currentUserLocation = normalized;
+      console.debug('[activities] currentUserLocation set from normalized window.lastCoords', currentUserLocation);
+    } else {
+      // If normalization failed, keep raw fallback for debugging
+      currentUserLocation = window.lastCoords;
+      console.debug('[activities] currentUserLocation set (raw, not normalized) from window.lastCoords', currentUserLocation);
+    }
   }
   
   if (!currentUserLocation) {
@@ -757,7 +806,11 @@ async function findActivities() {
   if (status) status.textContent = 'Finding activities near you...';
 
   try {
-    const { lat, lng } = currentUserLocation;
+    const normalized = normalizeLocation(currentUserLocation);
+    if (!normalized) {
+      throw new Error('Invalid current user location: missing lat/lng');
+    }
+    const { lat, lng } = normalized;
     
     // Find nearby places (default 5km radius)
     let places = await findNearbyPlaces(lat, lng, DEFAULT_SEARCH_RADIUS);
@@ -803,10 +856,13 @@ async function findActivities() {
         // Try to show demo activities
         try {
           if (currentUserLocation) {
-            const { lat, lng } = currentUserLocation;
-            const demoPlaces = getDemoActivities(lat, lng);
-            displayActivities(demoPlaces, lat, lng, null);
-            return; // Exit early if demo works
+            const normalized = normalizeLocation(currentUserLocation);
+            if (normalized) {
+              const { lat, lng } = normalized;
+              const demoPlaces = getDemoActivities(lat, lng);
+              displayActivities(demoPlaces, lat, lng, null);
+              return; // Exit early if demo works
+            }
           }
         } catch (fallbackErr) {
           console.error('[activities] Fallback also failed:', fallbackErr);
@@ -823,9 +879,12 @@ async function findActivities() {
     // Try to show demo activities as last resort
     try {
       if (currentUserLocation && !errorMessage.includes('demo activities')) {
-        const { lat, lng } = currentUserLocation;
-        const demoPlaces = getDemoActivities(lat, lng);
-        displayActivities(demoPlaces, lat, lng, null);
+        const normalized = normalizeLocation(currentUserLocation);
+        if (normalized) {
+          const { lat, lng } = normalized;
+          const demoPlaces = getDemoActivities(lat, lng);
+          displayActivities(demoPlaces, lat, lng, null);
+        }
       }
     } catch (fallbackErr) {
       console.error('[activities] Final fallback failed:', fallbackErr);
