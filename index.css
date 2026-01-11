@@ -48,7 +48,10 @@ button[disabled]{opacity:0.6;cursor:not-allowed}
 .activity-btn{width:100%;margin-bottom:12px;background:linear-gradient(135deg,#0077cc,#005fa3);font-weight:500;transition:transform 0.2s}
 .activity-btn:hover{transform:translateY(-1px);box-shadow:0 4px 12px rgba(0,119,204,0.3)}
 .activity-btn:disabled{opacity:0.6;cursor:not-allowed;transform:none}
-.activities-list{display:flex;flex-direction:column;gap:10px;max-height:400px;overflow-y:auto}
+/* Activities list: fixed-height scroll to keep layout stable */
+.activities-list{display:flex;flex-direction:column;gap:10px;height:300px;max-height:300px;overflow-y:auto;padding-right:8px}
+/* Utility class to apply fixed-scroll behavior to any list */
+.fixed-scroll-list{height:300px;max-height:300px;overflow-y:auto;padding-right:8px}
 .activity-item{padding:12px;background:#fff;border-radius:6px;border:1px solid #e6eef9;cursor:pointer;transition:all 0.2s}
 .activity-item:hover{background:#f7f9fc;border-color:var(--accent);transform:translateX(2px);box-shadow:0 2px 8px rgba(0,119,204,0.1)}
 .activity-header{display:flex;justify-content:space-between;align-items:start;margin-bottom:6px}
